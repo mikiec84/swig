@@ -1502,8 +1502,10 @@ public:
     } else {
       // Alternative constant handling will use the C syntax to make a true C# constant and hope that it compiles as C# code
       if (Getattr(n, "wrappedasconstant")) {
-	if (SwigType_type(t) == T_CHAR)
+	if (SwigType_type(t) == T_CHAR || SwigType_type(t) == T_WCHAR)
           Printf(constants_code, "\'%s\';\n", Getattr(n, "staticmembervariableHandler:value"));
+	else if (SwigType_type(t) == T_STRING || SwigType_type(t) == T_WSTRING)
+	  Printf(constants_code, "\"%s\";\n", Getattr(n, "staticmembervariableHandler:value"));
 	else
           Printf(constants_code, "%s;\n", Getattr(n, "staticmembervariableHandler:value"));
       } else {
