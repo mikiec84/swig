@@ -5,6 +5,10 @@ See the RELEASENOTES file for a summary of changes in each release.
 Version 2.0.10 (in progress)
 ============================
 
+2013-03-19: wsfulton
+            [C#, Java, D] Fix seg fault in SWIG using directors when class and virtual method names are
+            the same except being in different namespaces when the %nspace feature is not being used.
+
 2013-02-19: kwwette
             Fix bug in SWIG's handling of qualified (e.g. const) variables of array type. Given the typedef
               a(7).q(volatile).double myarray     // typedef volatile double[7] myarray;
@@ -55,6 +59,9 @@ Version 2.0.10 (in progress)
 2013-02-17: kwwette
             When generating functions provided by %extend, use "(void)" for no-argument functions
             instead of "()". This prevents warnings when compiling with "gcc -Wstrict-prototypes".
+
+2013-02-17: kwwette
+            [Octave] Minor fix to autodoc generation: get the right type for functions returning structs.
 
 2013-02-15: wsfulton
             Deprecate typedef names used in %extend that are not the real class/struct name. For example:

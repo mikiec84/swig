@@ -355,14 +355,10 @@ public:
 
       SwigType *type = Getattr(n, "type");
       if (type && Strcmp(type, "void")) {
-	type = SwigType_base(type);
-	Node *lookup = Swig_symbol_clookup(type, 0);
-	if (lookup)
-	  type = Getattr(lookup, "sym:name");
+	Node *nn = classLookup(Getattr(n, "type"));
+	String *type_str = nn ? Copy(Getattr(nn, "sym:name")) : SwigType_str(type, 0);
 	Append(decl_info, "@var{retval} = ");
-	String *type_str = NewString("");
-	Printf(type_str, "@var{retval} is of type %s. ", type);
-	Append(args_str, type_str);
+	Printf(args_str, "%s@var{retval} is of type %s. ", args_str, type_str);
 	Delete(type_str);
       }
 
@@ -1371,7 +1367,6 @@ public:
 	outputs++;
 
       // build argument list and type conversion string
-      idx = 0;
       p = l;
       while (p) {
 	if (checkAttribute(p, "tmap:in:numinputs", "0")) {
