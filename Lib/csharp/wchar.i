@@ -100,3 +100,5 @@ SWIGEXPORT void SWIGSTDCALL SWIGRegisterWStringCallback_$module(SWIG_CSharpWStri
 
 %typemap(typecheck) wchar_t * = char *;
 
+%typemap(csdirectorin) wchar_t * "System.Runtime.InteropServices.Marshal.PtrToStringUni($iminput)"
+
