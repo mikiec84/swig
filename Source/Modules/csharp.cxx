@@ -18,7 +18,7 @@
 
 /* Hash type used for upcalls from C/C++ */
 typedef DOH UpcallData;
-
+// helper function used in feature:interface implementation
 void Swig_propagate_interface_methods(Node *n);
 
 class CSHARP:public Language {
@@ -1610,16 +1610,19 @@ public:
   }
   String* getQualifiedInterfaceName(Node* n)
   {
-    String* ret;
-    String *nspace = Getattr(n, "sym:nspace");
-    String *iname = Getattr(n, "feature:interface:name");
-    if (nspace) {
-      if (namespce)
-	ret = NewStringf("%s.%s.%s", namespce, nspace, iname);
-      else
-	ret = NewStringf("%s.%s", nspace, iname);
-    } else {
-      ret = Copy(iname);
+    String* ret = Getattr(n, "feature:interface:qname");
+    if (!ret) {
+      String *nspace = Getattr(n, "sym:nspace");
+      String *iname = Getattr(n, "feature:interface:name");
+      if (nspace) {
+	if (namespce)
+	  ret = NewStringf("%s.%s.%s", namespce, nspace, iname);
+	else
+	  ret = NewStringf("%s.%s", nspace, iname);
+      } else {
+	ret = Copy(iname);
+      }
+      Setattr(n, "feature:interface:qname", ret);
     }
     return ret;
   }
@@ -1636,7 +1639,7 @@ public:
       upcast_name = NewStringf("%s.%s", iname, cptr_func);
     else
       upcast_name = NewStringf("%s.GetCPtr", iname);
-    Printf(interface_upcasts, "  HandleRef %s()", upcast_name);
+    Printf(interface_upcasts, "  public HandleRef %s()", upcast_name);
     Replaceall(upcast_name, ".", "_");
     String *upcast_method = Swig_name_member(getNSpace(), proxy_class_name, upcast_name);
     String *wname = Swig_name_wrapper(upcast_method);
@@ -1651,7 +1654,6 @@ public:
     Delete(upcast_name);
     Delete(wname);
     Delete(upcast_method);
-    Delete(iname);
     Delete(c_baseclass);
   }
   /* -----------------------------------------------------------------------------
@@ -1877,6 +1879,7 @@ public:
       Delete(director_connect_method_name);
     }
 
+    Delete(interface_upcasts);
     Delete(interface_list);
     Delete(attributes);
     Delete(destruct);
@@ -1966,7 +1969,6 @@ public:
    * ---------------------------------------------------------------------- */
 
   virtual int classHandler(Node *n) {
-
     String *nspace = getNSpace();
     File *f_proxy = NULL;
     // save class local variables
@@ -2035,8 +2037,7 @@ public:
 
 	addOpenNamespace(nspace, f_proxy);
       }
-      Append(filenames_list, Copy(filen));
-      Delete(filen);
+      Append(filenames_list, filen);
 
       // Start writing out the proxy class file
       emitBanner(f_proxy);
@@ -2066,6 +2067,7 @@ public:
 	addOpenNamespace(nspace, f_interface);
 	emitInterfaceDeclaration(n, iname, f_interface);
       }
+      Delete(output_directory);
     }
 
     Language::classHandler(n);
