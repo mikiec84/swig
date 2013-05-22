@@ -1683,13 +1683,8 @@ public:
       List *baselist = Getattr(n, "bases");
       if (baselist) {
         Iterator base = First(baselist);
-        while (base.item && GetFlag(base.item, "feature:ignore")) {
-          base = Next(base);
-        }
-	while (base.item && Getattr(base.item, "feature:interface")) {
-	  addInterfaceNameAndUpcasts(interface_list, interface_upcasts, base.item, c_classname);
+	while (base.item && (GetFlag(base.item, "feature:ignore") || Getattr(base.item, "feature:interface")))
 	  base = Next(base);
-	}
         if (base.item) {
           c_baseclassname = Getattr(base.item, "name");
           baseclass = Copy(getProxyName(c_baseclassname));
@@ -1698,9 +1693,7 @@ public:
           base = Next(base);
           /* Warn about multiple inheritance for additional base class(es) */
           while (base.item) {
-	    if (Getattr(base.item, "feature:interface")) {
-	      addInterfaceNameAndUpcasts(interface_list, interface_upcasts, base.item, c_classname);
-	    } else if (!GetFlag(base.item, "feature:ignore")) {
+	    if (!GetFlag(base.item, "feature:ignore") && !Getattr(base.item, "feature:interface")) {
 	      String *proxyclassname = Getattr(n, "classtypeobj");
 	      String *baseclassname = Getattr(base.item, "name");
 	      Swig_warning(WARN_CSHARP_MULTIPLE_INHERITANCE, Getfile(n), Getline(n),
@@ -1710,10 +1703,9 @@ public:
           }
         }
       }
-      if (Getattr(n, "feature:interface")) {
-	addInterfaceNameAndUpcasts(interface_list, interface_upcasts, n, c_classname);
-      }
     }
+    if (Hash* interface_classes = Getattr(n, "feature:interface:bases"))
+      addInterfaceNameAndUpcasts(interface_list, interface_upcasts, interface_classes, c_classname);
 
     bool derived = baseclass && getProxyName(c_baseclassname);
     if (derived && purebase_notderived)
@@ -1971,6 +1963,7 @@ public:
   virtual int classHandler(Node *n) {
     String *nspace = getNSpace();
     File *f_proxy = NULL;
+    File *f_interface = NULL;
     // save class local variables
     String* old_proxy_class_name = proxy_class_name;
     String* old_full_imclass_name = full_imclass_name;
@@ -1979,7 +1972,7 @@ public:
     String* old_proxy_class_def = proxy_class_def;
     String* old_proxy_class_code = proxy_class_code;
     String *old_interface_class_code = interface_class_code;
-
+    interface_class_code = 0;
     if (proxy_flag) {
       proxy_class_name = NewString(Getattr(n, "sym:name"));
       if (Node* outer = Getattr(n, "nested:outer")) {
@@ -2020,32 +2013,22 @@ public:
       }
 
       // inner class doesn't need this prologue
+      String *output_directory = outputDirectory(nspace);
       if (!Getattr(n, "nested:outer")) {
-	String *output_directory = outputDirectory(nspace);
 	String *filen = NewStringf("%s%s.cs", output_directory, proxy_class_name);
 	f_proxy = NewFile(filen, "w", SWIG_output_files());
 	if (!f_proxy) {
 	  FileErrorDisplay(filen);
 	  SWIG_exit(EXIT_FAILURE);
 	}
-	Append(filenames_list, Copy(filen));
-	Delete(filen);
-	filen = NULL;
-
+	Append(filenames_list, filen);
 	// Start writing out the proxy class file
 	emitBanner(f_proxy);
-
 	addOpenNamespace(nspace, f_proxy);
       }
-      Append(filenames_list, filen);
 
-      // Start writing out the proxy class file
-      emitBanner(f_proxy);
-      addOpenNamespace(nspace, f_proxy);
-
-      Clear(proxy_class_def);
-      Clear(proxy_class_code);
-
+      proxy_class_def = NewStringEmpty();
+      proxy_class_code = NewStringEmpty();
       destructor_call = NewStringEmpty();
       proxy_class_constants_code = NewStringEmpty();
       Swig_propagate_interface_methods(n);
@@ -2056,7 +2039,7 @@ public:
 	  Swig_error(Getfile(n), Getline(n), "Interface %s has no name attribute", proxy_class_name);
 	  SWIG_exit(EXIT_FAILURE);
 	}
-	filen = NewStringf("%s%s.cs", output_directory, iname);
+	String *filen = NewStringf("%s%s.cs", output_directory, iname);
 	f_interface = NewFile(filen, "w", SWIG_output_files());
 	if (!f_interface) {
 	  FileErrorDisplay(filen);
@@ -2120,9 +2103,6 @@ public:
       } else
 	Append(old_proxy_class_code, "}\n");
 
-      Printf(f_proxy, "}\n");
-      addCloseNamespace(nspace, f_proxy);
-      Delete(f_proxy);
       if (f_interface) {
 	Printv(f_interface, interface_class_code, "}\n", NIL);
 	addCloseNamespace(nspace, f_interface);
@@ -2218,7 +2198,7 @@ public:
     String *pre_code = NewString("");
     String *post_code = NewString("");
     String *terminator_code = NewString("");
-    bool is_interface = Getattr(parentNode(n), "feature:interface") != 0 && !static_flag;
+    bool is_interface = Getattr(parentNode(n), "feature:interface") != 0 && !static_flag && Getattr(n, "feature:interface:owner") == 0;
 
     if (!proxy_flag)
       return;
