@@ -1,14 +1,14 @@
 %define DECLARE_INTERFACE_(CTYPE, INTERFACE, IMPL)
 %feature("interface", name = "INTERFACE", cptr = #INTERFACE ## "_getCPtr") CTYPE;
-%typemap(jstype) CTYPE*, const CTYPE& "INTERFACE"
-%typemap(jtype, nopgcpp="1") CTYPE*, const CTYPE& "long"
-%typemap(javadirectorout) CTYPE*, const CTYPE& "$javacall." ## #INTERFACE ## "_getCPtr()"
-%typemap(javadirectorin) CTYPE*, const CTYPE&
+%typemap(jstype) CTYPE*, CTYPE& "INTERFACE"
+%typemap(jtype, nopgcpp="1") CTYPE*, CTYPE& "long"
+%typemap(javadirectorout) CTYPE*, CTYPE& "$javacall." ## #INTERFACE ## "_getCPtr()"
+%typemap(javadirectorin) CTYPE*, CTYPE&
 %{
 	($jniinput == 0) ? null : (INTERFACE)new IMPL($jniinput,false)
 %}
-%typemap(javain) CTYPE*, const CTYPE& "$javainput." ## #INTERFACE ## "_getCPtr()"
-%typemap(javaout) CTYPE*, const CTYPE&
+%typemap(javain) CTYPE*, CTYPE& "$javainput." ## #INTERFACE ## "_getCPtr()"
+%typemap(javaout) CTYPE*, CTYPE&
 { 
   long cPtr = $jnicall;
   return (cPtr == 0) ? null : (INTERFACE)new IMPL(cPtr,true); 
