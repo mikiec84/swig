@@ -2022,7 +2022,13 @@ public:
       Printf(f_interface, "  long %s_getCPtr();\n", iname);
   }
 
-  /* ----------------------------------------------------------------------
+  int classDeclaration(Node *n) {
+    if (proxy_flag)
+      Swig_propagate_interface_methods(n);
+    return Language::classDeclaration(n);
+  }
+
+    /* ----------------------------------------------------------------------
    * classHandler()
    * ---------------------------------------------------------------------- */
 
@@ -2119,7 +2125,6 @@ public:
       destructor_call = NewString("");
       destructor_throws_clause = NewString("");
       proxy_class_constants_code = NewString("");
-      Swig_propagate_interface_methods(n);
       if (Getattr(n, "feature:interface")) {
 	interface_class_code = NewStringEmpty();
 	String* iname = Getattr(n, "feature:interface:name");

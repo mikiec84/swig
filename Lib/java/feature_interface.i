@@ -13,6 +13,10 @@
   long cPtr = $jnicall;
   return (cPtr == 0) ? null : (INTERFACE)new IMPL(cPtr,true); 
 }
+%typemap(directorin,descriptor="L$packagepath/" ## #INTERFACE ## ";") CTYPE*, CTYPE&
+%{ $input = 0;
+   *(($&1_ltype*)&$input) = &$1; 
+%}
 SWIG_JAVABODY_PROXY(public, protected, CTYPE)
 %enddef
 
