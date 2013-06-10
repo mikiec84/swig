@@ -2298,7 +2298,7 @@ public:
 	// Smart pointer classes do not mirror the inheritance hierarchy of the underlying pointer type, so no virtual/override/new required.
 	if (Node *ovr_base = Getattr(n, "override")) {
 	  bool ovr = false;
-	  for (Node* direct_base = Getattr(n, "direct_base"); direct_base; direct_base = Getattr(direct_base, "direct_base")) {
+	  for (Node* direct_base = Getattr(parentNode(n), "direct_base"); direct_base; direct_base = Getattr(direct_base, "direct_base")) {
 	    if (direct_base == ovr_base) { // "override" only applies if the base was not discarded (e.g. in case of multiple inheritance or via "ignore")
 	      ovr = true;
 	      break;
