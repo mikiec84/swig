@@ -1959,6 +1959,17 @@ public:
     else
       Printf(f_interface, "  HandleRef GetCPtr();\n");
   }
+  void emitAbstractClassDeclaration(Node* n, String* impname, File* f_interface)
+  {
+    Printv(f_interface, typemapLookup(n, "csimports", Getattr(n, "classtypeobj"), WARN_NONE), "\n", NIL);
+    Printf(f_interface, "public sealed %s : %s\n", impname, proxy_class_name);
+    Printf(f_interface, "  private HandleRef swigCPtr;");
+    Printf(f_interface,
+"  [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]\n"
+"  public %s(IntPtr cPtr, bool cMemoryOwn) : base(cPtr, cMemoryOwn) {\n"
+"    swigCPtr = new HandleRef(this, cPtr);\n    }\n", impname);
+  }
+
   void calculateDirectBase(Node* n)
   {
     Node* direct_base = 0;
@@ -2075,6 +2086,23 @@ public:
 	emitBanner(f_interface);
 	addOpenNamespace(nspace, f_interface);
 	emitInterfaceDeclaration(n, iname, f_interface);
+      } else if (Getattr(n, "feature:abstract")){
+	interface_class_code = NewStringEmpty();
+	String* iname = Getattr(n, "feature:abstract:impname");
+	if (!iname) {
+	  Swig_error(Getfile(n), Getline(n), "Abstract class %s has no impname attribute", proxy_class_name);
+	  SWIG_exit(EXIT_FAILURE);
+	}
+	String *filen = NewStringf("%s%s.cs", output_directory, iname);
+	f_interface = NewFile(filen, "w", SWIG_output_files());
+	if (!f_interface) {
+	  FileErrorDisplay(filen);
+	  SWIG_exit(EXIT_FAILURE);
+	}
+	Append(filenames_list, filen); // file name ownership goes to the list
+	emitBanner(f_interface);
+	addOpenNamespace(nspace, f_interface);
+	emitAbstractClassDeclaration(n, iname, f_interface);
       }
       Delete(output_directory);
       calculateDirectBase(n);
@@ -2089,22 +2117,28 @@ public:
       Replaceall(proxy_class_def, "$csclassname", proxy_class_name);
       Replaceall(proxy_class_code, "$csclassname", proxy_class_name);
       Replaceall(proxy_class_constants_code, "$csclassname", proxy_class_name);
+      Replaceall(interface_class_code, "$csclassname", proxy_class_name);
 
       Replaceall(proxy_class_def, "$csclazzname", csclazzname);
       Replaceall(proxy_class_code, "$csclazzname", csclazzname);
       Replaceall(proxy_class_constants_code, "$csclazzname", csclazzname);
+      Replaceall(interface_class_code, "$csclazzname", csclazzname);
 
       Replaceall(proxy_class_def, "$module", module_class_name);
       Replaceall(proxy_class_code, "$module", module_class_name);
       Replaceall(proxy_class_constants_code, "$module", module_class_name);
+      Replaceall(interface_class_code, "$module", module_class_name);
 
       Replaceall(proxy_class_def, "$imclassname", full_imclass_name);
       Replaceall(proxy_class_code, "$imclassname", full_imclass_name);
       Replaceall(proxy_class_constants_code, "$imclassname", full_imclass_name);
+      Replaceall(interface_class_code, "$imclassname", full_imclass_name);
 
       Replaceall(proxy_class_def, "$dllimport", dllimport);
       Replaceall(proxy_class_code, "$dllimport", dllimport);
       Replaceall(proxy_class_constants_code, "$dllimport", dllimport);
+      Replaceall(interface_class_code, "$dllimport", dllimport);
+
       bool has_outerclass = Getattr(n, "nested:outer") != 0 && !GetFlag(n, "feature:flatnested");
       if (!has_outerclass)
 	Printv(f_proxy, proxy_class_def, proxy_class_code, NIL);
@@ -2224,6 +2258,7 @@ public:
     String *post_code = NewString("");
     String *terminator_code = NewString("");
     bool is_interface = Getattr(parentNode(n), "feature:interface") != 0 && !static_flag && Getattr(n, "feature:interface:owner") == 0;
+    bool is_abstract_class_member = Getattr(parentNode(n), "feature:abstract") != 0 && Getattr(n, "feature:interface:owner") == 0 && GetFlag(n,"abstract");
 
     if (!proxy_flag)
       return;
@@ -2277,6 +2312,8 @@ public:
     const String *csattributes = Getattr(n, "feature:cs:attributes");
     if (csattributes)
       Printf(function_code, "  %s\n", csattributes);
+    if (is_abstract_class_member)
+      Printv(proxy_class_code, function_code, NIL);
     const String *methodmods = Getattr(n, "feature:cs:methodmodifiers");
     if (methodmods) {
       if (is_smart_pointer()) {
@@ -2296,20 +2333,26 @@ public:
       Printf(function_code, "  %s ", methodmods);
       if (!is_smart_pointer()) {
 	// Smart pointer classes do not mirror the inheritance hierarchy of the underlying pointer type, so no virtual/override/new required.
-	if (Node *ovr_base = Getattr(n, "override")) {
-	  bool ovr = false;
-	  for (Node* direct_base = Getattr(parentNode(n), "direct_base"); direct_base; direct_base = Getattr(direct_base, "direct_base")) {
-	    if (direct_base == ovr_base) { // "override" only applies if the base was not discarded (e.g. in case of multiple inheritance or via "ignore")
-	      ovr = true;
-	      break;
+	if (is_abstract_class_member) {
+	  Printf(function_code, "override ");
+	  Printf(proxy_class_code, "  %s ", methodmods);
+	  Printf(proxy_class_code, "abstract ");
+	} else {
+	  if (Node *ovr_base = Getattr(n, "override")) {
+	    bool ovr = false;
+	    for (Node* direct_base = Getattr(parentNode(n), "direct_base"); direct_base; direct_base = Getattr(direct_base, "direct_base")) {
+	      if (direct_base == ovr_base) { // "override" only applies if the base was not discarded (e.g. in case of multiple inheritance or via "ignore")
+		ovr = true;
+		break;
+	      }
 	    }
+	    Printf(function_code, ovr ? "override " : "virtual ");
 	  }
-	  Printf(function_code, ovr ? "override " : "virtual ");
+	  else if (checkAttribute(n, "storage", "virtual"))
+	    Printf(function_code, "virtual ");
+	  if (Getattr(n, "hides"))
+	    Printf(function_code, "new ");
 	}
-	else if (checkAttribute(n, "storage", "virtual"))
-	  Printf(function_code, "virtual ");
-	if (Getattr(n, "hides"))
-	  Printf(function_code, "new ");
       }
     }
     if (static_flag)
@@ -2317,6 +2360,8 @@ public:
     Printf(function_code, "%s %s(", return_type, proxy_function_name);
     if (is_interface)
       Printf(interface_class_code, "  %s %s(", return_type, proxy_function_name);
+    if (is_abstract_class_member)
+      Printf(proxy_class_code, "  %s %s(", return_type, proxy_function_name);
     
 
     Printv(imcall, full_imclass_name, ".$imfuncname(", NIL);
@@ -2401,11 +2446,15 @@ public:
 	  Printf(function_code, ", ");
 	  if (is_interface)
 	    Printf(interface_class_code, ", ");
+	  if (is_abstract_class_member)
+	    Printf(proxy_class_code, ", ");
 	}
 	gencomma = 2;
 	Printf(function_code, "%s %s", param_type, arg);
 	if (is_interface)
 	  Printf(interface_class_code, "%s %s", param_type, arg);
+	if (is_abstract_class_member)
+	  Printf(proxy_class_code, "%s %s", param_type, arg);
 
 	Delete(arg);
 	Delete(param_type);
@@ -2417,6 +2466,8 @@ public:
     Printf(function_code, ")");
     if (is_interface)
       Printf(interface_class_code, ");\n");
+    if (is_abstract_class_member)
+      Printf(proxy_class_code, ");\n");
 
     // Transform return type used in PInvoke function (in intermediary class) to type used in C# wrapper function (in proxy class)
     if ((tm = Swig_typemap_lookup("csout", n, "", 0))) {
@@ -2546,7 +2597,7 @@ public:
     } else {
       // Normal function call
       Printf(function_code, " %s\n\n", tm ? (const String *) tm : empty_string);
-      Printv(proxy_class_code, function_code, NIL);
+      Printv(is_abstract_class_member ? interface_class_code : proxy_class_code, function_code, NIL);
     }
 
     Delete(pre_code);
