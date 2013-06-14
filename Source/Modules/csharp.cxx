@@ -1962,7 +1962,7 @@ public:
   void emitAbstractClassDeclaration(Node* n, String* impname, File* f_interface)
   {
     Printv(f_interface, typemapLookup(n, "csimports", Getattr(n, "classtypeobj"), WARN_NONE), "\n", NIL);
-    Printf(f_interface, "public sealed %s : %s\n", impname, proxy_class_name);
+    Printf(f_interface, "public sealed class %s : %s {\n", impname, proxy_class_name);
     Printf(f_interface, "  private HandleRef swigCPtr;");
     Printf(f_interface,
 "  [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]\n"
