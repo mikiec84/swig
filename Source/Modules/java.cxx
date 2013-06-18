@@ -2022,6 +2022,25 @@ public:
       Printf(f_interface, "  long %s_getCPtr();\n", iname);
   }
 
+  void emitAbstractClassDeclaration(Node* n, String* impname, File* f_interface, String *nspace)
+  {
+    if (package || nspace) {
+      Printf(f_interface, "package ");
+      if (package)
+	Printv(f_interface, package, nspace ? "." : "", NIL);
+      if (nspace)
+	Printv(f_interface, nspace, NIL);
+      Printf(f_interface, ";\n");
+    }
+    Printv(f_interface, typemapLookup(n, "javaimports", Getattr(n, "classtypeobj"), WARN_NONE), "\n", NIL);
+    Printf(f_interface, "public final class %s extends %s {\n", impname, proxy_class_name);
+    Printf(f_interface, "  private long swigCPtr;\n");
+    Printf(f_interface,
+      "  public %s(long cPtr, boolean cMemoryOwn) {\n"
+      "    super(cPtr, cMemoryOwn);\n"
+      "    swigCPtr = cPtr;\n  }\n", impname);
+  }
+
   int classDeclaration(Node *n) {
     if (proxy_flag)
       Swig_propagate_interface_methods(n);
@@ -2141,6 +2160,22 @@ public:
 	Append(filenames_list, filen); // file name ownership goes to the list
 	emitBanner(f_interface);
 	emitInterfaceDeclaration(n, iname, f_interface, nspace);
+      } else if (Getattr(n, "feature:abstract")) {
+	interface_class_code = NewStringEmpty();
+	String* iname = Getattr(n, "feature:abstract:impname");
+	if (!iname) {
+	  Swig_error(Getfile(n), Getline(n), "Abstract class %s has no impname attribute", proxy_class_name);
+	  SWIG_exit(EXIT_FAILURE);
+	}
+	String *filen = NewStringf("%s%s.java", output_directory, iname);
+	f_interface = NewFile(filen, "w", SWIG_output_files());
+	if (!f_interface) {
+	  FileErrorDisplay(filen);
+	  SWIG_exit(EXIT_FAILURE);
+	}
+	Append(filenames_list, filen); // file name ownership goes to the list
+	emitBanner(f_interface);
+	emitAbstractClassDeclaration(n, iname, f_interface, nspace);
       }
       Delete(output_directory);
     }
@@ -2323,6 +2358,7 @@ public:
     String *pre_code = NewString("");
     String *post_code = NewString("");
     bool is_interface = Getattr(parentNode(n), "feature:interface") != 0 && !static_flag && Getattr(n, "feature:interface:owner") == 0;
+    bool is_abstract_class_member = Getattr(parentNode(n), "feature:abstract") != 0 && Getattr(n, "feature:interface:owner") == 0 && GetFlag(n,"abstract");
 
     if (!proxy_flag)
       return;
@@ -2369,12 +2405,16 @@ public:
     const String *methodmods = Getattr(n, "feature:java:methodmodifiers");
     methodmods = methodmods ? methodmods : (is_public(n) ? public_string : protected_string);
     Printf(function_code, "  %s ", methodmods);
+    if (is_abstract_class_member)
+      Printf(proxy_class_code, "  %s abstract ", (is_public(n) ? public_string : protected_string));
     if (static_flag)
       Printf(function_code, "static ");
     Printf(function_code, "%s %s(", return_type, proxy_function_name);
-    
     if (is_interface)
       Printf(interface_class_code, "  %s %s(", return_type, proxy_function_name);
+    if (is_abstract_class_member)
+      Printf(proxy_class_code, "%s %s(", return_type, proxy_function_name);
+    
 
     Printv(imcall, full_imclass_name, ".$imfuncname(", NIL);
     if (!static_flag) {
@@ -2466,11 +2506,15 @@ public:
 	  Printf(function_code, ", ");
 	  if (is_interface)
 	    Printf(interface_class_code, ", ");
+	  if (is_abstract_class_member)
+	    Printf(proxy_class_code, ", ");
 	}
 	gencomma = 2;
 	Printf(function_code, "%s %s", param_type, arg);
 	if (is_interface)
 	  Printf(interface_class_code, "%s %s", param_type, arg);
+	if (is_abstract_class_member)
+	  Printf(proxy_class_code, "%s %s", param_type, arg);
 
 	if (prematureGarbageCollectionPreventionParameter(pt, p)) {
           String *pgcppname = Getattr(p, "tmap:javain:pgcppname");
@@ -2494,6 +2538,8 @@ public:
     Printf(function_code, ")");
     if (is_interface)
       Printf(interface_class_code, ");\n");
+    if (is_abstract_class_member)
+      Printf(proxy_class_code, ");\n");
 
     // Transform return type used in JNI function (in intermediary class) to type used in Java wrapper function (in proxy class)
     if ((tm = Swig_typemap_lookup("javaout", n, "", 0))) {
@@ -2553,7 +2599,10 @@ public:
 
     generateThrowsClause(n, function_code);
     Printf(function_code, " %s\n\n", tm ? (const String *) tm : empty_string);
-    Printv(proxy_class_code, function_code, NIL);
+    if (is_abstract_class_member)
+      Printv(interface_class_code, function_code, NIL);
+    else
+      Printv(proxy_class_code, function_code, NIL);
 
     Delete(pre_code);
     Delete(post_code);
