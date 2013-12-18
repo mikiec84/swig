@@ -135,16 +135,17 @@ swig -go -help
 </tr>
 
 <tr>
-<td>-go-prefix &lt;prefix&gt;</td>
-<td>When generating code for gccgo, set the prefix to use.  This
-  corresponds to the <tt>-fgo-prefix</tt> option to gccgo.</td>
+<td>-go-pkgpath &lt;pkgpath&gt;</td>
+<td>When generating code for gccgo, set the pkgpath to use.  This
+  corresponds to the <tt>-fgo-pkgpath</tt> option to gccgo.</td>
 </tr>
 
 <tr>
-<td>-long-type-size &lt;s&gt;</td>
-<td>Set the size for the C/C++ type <tt>long</tt>.  This controls
-  whether <tt>long</tt> is converted to the Go type <tt>int32</tt>
-  or <tt>int64</tt>.  The &lt;s&gt; argument should be 32 or 64.</td>
+<td>-go-prefix &lt;prefix&gt;</td>
+<td>When generating code for gccgo, set the prefix to use.  This
+  corresponds to the <tt>-fgo-prefix</tt> option to gccgo.
+  If <tt>-go-pkgpath</tt> is used, <tt>-go-prefix</tt> will be
+  ignored.</td>
 </tr>
 
 </table>
@@ -493,12 +494,12 @@ uses a given C/C++ type.
 
 <tr>
 <td>long</td>
-<td>int32 or int64, depending on <tt>-long-type-size</tt></td>
+<td>int64</td>
 </tr>
 
 <tr>
 <td>unsigned long</td>
-<td>uint32 or uint64, depending on <tt>-long-type-size</tt></td>
+<td>uint64</td>
 </tr>
 
 <tr>
