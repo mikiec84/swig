@@ -1252,7 +1252,7 @@ csharp_version:
 # -----------------------------------------------------------------
 
 csharp_clean:
-	rm -f *_wrap* *~ .~* runme runme.exe *.exe.mdb gc.log `find . -name \*.cs | grep -v runme.cs`
+	rm -f *_wrap* *~ .~* $(RUNME) $(RUNME).exe *.exe.mdb gc.log `find . -name \*.cs | grep -v $(RUNME).cs`
 	rm -f core @EXTRA_CLEAN@
 	rm -f *.@OBJEXT@ *@CSHARPSO@
 
@@ -1556,12 +1556,13 @@ GO = @GO@
 GOGCC = @GOGCC@
 GO1 = @GO1@
 GO12 = @GO12@
+GO13 = @GO13@
 GOC = @GOC@
 GOOPT = @GOOPT@
 GOVERSIONOPTION = @GOVERSIONOPTION@
 
 GOSWIGARG = `if $(GOGCC) ; then echo -gccgo; fi`
-GOCOMPILEARG = `if $(GOGCC) ; then echo -c -g; elif $(GO1) ; then echo tool $(GOC:c=g) ; fi`
+GOCOMPILEARG = `if $(GOGCC) ; then echo -c -g; elif $(GO1) ; then echo tool $(GOC:c=g) ; fi` `if $(GO13) ; then echo -pack ; fi`
 
 GOSRCS = $(INTERFACE:.i=.go)
 GOCSRCS = $(INTERFACE:.i=_gc.c)
@@ -1582,7 +1583,7 @@ GOGCCOBJS = $(GOSRCS:.go=.@OBJEXT@)
 
 go: $(SRCS)
 	$(SWIG) -go $(GOOPT) $(GOSWIGARG) $(SWIGOPT) $(INTERFACEPATH)
-	if $(GO12) || $(GOGCC); then \
+	if $(GO12) || $(GO13) || $(GOGCC); then \
 	  $(CC) -g -c $(CFLAGS) $(SRCS) $(ISRCS) $(INCLUDES); \
 	else \
 	  $(CC) -g -c $(CCSHARED) $(CFLAGS) $(SRCS) $(ISRCS) $(INCLUDES); \
@@ -1592,10 +1593,23 @@ go: $(SRCS)
 	if ! $(GOGCC) ; then \
 	  $(COMPILETOOL) $(GOTOOL) $(GOC) -I $${GOROOT:-`go env GOROOT`}/pkg/$${GOOS:-`go env GOOS`}_$${GOARCH:-`go env GOARCH`} $(GOCSRCS); \
 	  rm -f $(GOPACKAGE); \
-	  if $(GO12); then \
+	  if $(GO13); then \
+	    cp $(GOGCOBJS) $(GOPACKAGE); \
+	    $(COMPILETOOL) $(GOPACK) r $(GOPACKAGE) $(GOCSRCS:.c=.$(GOOBJEXT)) $(OBJS) $(IOBJS); \
+	  elif $(GO12); then \
 	    $(COMPILETOOL) $(GOPACK) grc $(GOPACKAGE) $(GOGCOBJS) $(GOCSRCS:.c=.$(GOOBJEXT)) $(OBJS) $(IOBJS); \
 	  else \
 	    $(COMPILETOOL) $(GOPACK) grc $(GOPACKAGE) $(GOGCOBJS) $(GOCSRCS:.c=.$(GOOBJEXT)); \
+	  fi; \
+	fi
+	if test -f $(RUNME).go; then \
+	  $(GO) $(GOCOMPILEARG) $(RUNME).go; \
+	  if $(GOGCC) ; then \
+	    $(COMPILETOOL) $(GO) -o $(RUNME) $(RUNME).@OBJEXT@ $(GOGCCOBJS) $(OBJS) $(IOBJS); \
+	  elif $(GO12) || $(GO13); then \
+	    $(COMPILETOOL) $(GOTOOL) $(GOLD) -linkmode external -extld $(CC) -extldflags "$(CFLAGS)" -o $(RUNME) $(RUNME).$(GOOBJEXT); \
+	  else \
+	    $(COMPILETOOL) $(GOTOOL) $(GOLD) -r $${GOROOT:-`go env GOROOT`}/pkg/$${GOOS:-`go env GOOS`}_$${GOARCH:-`go env GOARCH`}:. -o $(RUNME) $(RUNME).$(GOOBJEXT); \
 	  fi; \
 	fi
 
@@ -1605,7 +1619,7 @@ go: $(SRCS)
 
 go_cpp: $(SRCS)
 	$(SWIG) -go -c++ $(GOOPT) $(GOSWIGARG) $(SWIGOPT) $(INTERFACEPATH)
-	if $(GO12) || $(GOGCC); then \
+	if $(GO12) || $(GO13) || $(GOGCC); then \
 	  $(CXX) -g -c $(CXXFLAGS) $(SRCS) $(CXXSRCS) $(ICXXSRCS) $(INCLUDES); \
 	else \
 	  $(CXX) -g -c $(CCSHARED) $(CXXFLAGS) $(SRCS) $(CXXSRCS) $(ICXXSRCS) $(INCLUDES); \
@@ -1615,42 +1629,32 @@ go_cpp: $(SRCS)
 	if ! $(GOGCC) ; then \
 	  $(COMPILETOOL) $(GOTOOL) $(GOC) -I $${GOROOT:-`go env GOROOT`}/pkg/$${GOOS:-`go env GOOS`}_$${GOARCH:-`go env GOARCH`} $(GOCSRCS); \
 	  rm -f $(GOPACKAGE); \
-	  if $(GO12); then \
+	  if $(GO13); then \
+	    cp $(GOGCOBJS) $(GOPACKAGE); \
+	    $(COMPILETOOL) $(GOPACK) r $(GOPACKAGE) $(GOCSRCS:.c=.$(GOOBJEXT)) $(OBJS) $(IOBJS); \
+	  elif $(GO12); then \
 	    $(COMPILETOOL) $(GOPACK) grc $(GOPACKAGE) $(GOGCOBJS) $(GOCSRCS:.c=.$(GOOBJEXT)) $(OBJS) $(IOBJS); \
 	  else \
 	    $(COMPILETOOL) $(GOPACK) grc $(GOPACKAGE) $(GOGCOBJS) $(GOCSRCS:.c=.$(GOOBJEXT)); \
 	  fi; \
 	fi
-
-# -----------------------------------------------------------------
-# Running a Go example (C)
-# -----------------------------------------------------------------
-
-go_run: runme.go
-	$(GO) $(GOCOMPILEARG) runme.go
-	if $(GOGCC) ; then \
-	  $(COMPILETOOL) $(GO) -o runme runme.@OBJEXT@ $(GOGCCOBJS) $(OBJS) $(IOBJS); \
-	elif $(GO12); then \
-	  $(COMPILETOOL) $(GOTOOL) $(GOLD) -linkmode external -extld $(CC) -extldflags "$(CFLAGS)" -o runme runme.$(GOOBJEXT); \
-	else \
-	  $(COMPILETOOL) $(GOTOOL) $(GOLD) -r $${GOROOT:-`go env GOROOT`}/pkg/$${GOOS:-`go env GOOS`}_$${GOARCH:-`go env GOARCH`}:. -o runme runme.$(GOOBJEXT); \
+	if test -f $(RUNME).go; then \
+	  $(GO) $(GOCOMPILEARG) $(RUNME).go; \
+	  if $(GOGCC) ; then \
+	    $(COMPILETOOL) $(GO) -o $(RUNME) $(RUNME).@OBJEXT@ $(GOGCCOBJS) $(OBJS) $(IOBJS) -lstdc++; \
+	  elif $(GO12) || $(GO13); then \
+	    $(COMPILETOOL) $(GOTOOL) $(GOLD) -linkmode external -extld $(CXX) -extldflags "$(CXXFLAGS)" -o $(RUNME) $(RUNME).$(GOOBJEXT); \
+	  else \
+	    $(COMPILETOOL) $(GOTOOL) $(GOLD) -r $${GOROOT:-`go env GOROOT`}/pkg/$${GOOS:-`go env GOOS`}_$${GOARCH:-`go env GOARCH`}:. -o $(RUNME) $(RUNME).$(GOOBJEXT); \
+	  fi; \
 	fi
-	env LD_LIBRARY_PATH=.:$$LD_LIBRARY_PATH $(RUNTOOL) ./runme $(RUNPIPE)
 
 # -----------------------------------------------------------------
-# Running a Go example (C++)
+# Running Go example
 # -----------------------------------------------------------------
 
-go_run_cpp: runme.go
-	$(GO) $(GOCOMPILEARG) runme.go
-	if $(GOGCC) ; then \
-	  $(COMPILETOOL) $(GO) -o runme runme.@OBJEXT@ $(GOGCCOBJS) $(OBJS) $(IOBJS) -lstdc++; \
-	elif $(GO12); then \
-	  $(COMPILETOOL) $(GOTOOL) $(GOLD) -linkmode external -extld $(CXX) -extldflags "$(CXXFLAGS)" -o runme runme.$(GOOBJEXT); \
-	else \
-	  $(COMPILETOOL) $(GOTOOL) $(GOLD) -r $${GOROOT:-`go env GOROOT`}/pkg/$${GOOS:-`go env GOOS`}_$${GOARCH:-`go env GOARCH`}:. -o runme runme.$(GOOBJEXT); \
-	fi
-	env LD_LIBRARY_PATH=.:$$LD_LIBRARY_PATH $(RUNTOOL) ./runme $(RUNPIPE)
+go_run:
+	env LD_LIBRARY_PATH=.:$$LD_LIBRARY_PATH $(RUNTOOL) ./$(RUNME) $(RUNPIPE)
 
 # -----------------------------------------------------------------
 # Version display
@@ -1664,7 +1668,7 @@ go_version:
 # -----------------------------------------------------------------
 
 go_clean:
-	rm -f *_wrap* *_gc* .~* runme $(GOSRCS)
+	rm -f *_wrap* *_gc* .~* $(RUNME) $(GOSRCS)
 	rm -f core @EXTRA_CLEAN@
 	rm -f *.@OBJEXT@ *.[568] *.a *@SO@
 
@@ -1735,6 +1739,6 @@ d_version:
 # -----------------------------------------------------------------
 
 d_clean:
-	rm -f *_wrap* *~ .~* runme runme.exe `find . -name \*.d | grep -v runme.d`
+	rm -f *_wrap* *~ .~* $(RUNME) $(RUNME).exe `find . -name \*.d | grep -v $(RUNME).d`
 	rm -f core @EXTRA_CLEAN@
 	rm -f *.@OBJEXT@ *@SO@

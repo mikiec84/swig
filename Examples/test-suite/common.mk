@@ -87,6 +87,7 @@ CPP_TEST_BROKEN += \
 	nested_private \
 	overload_complicated \
 	template_default_pointer \
+	template_private_assignment \
 	template_expr \
 	$(CPP11_TEST_BROKEN)
 
@@ -244,6 +245,7 @@ CPP_TEST_CASES += \
 	li_boost_shared_ptr \
 	li_boost_shared_ptr_bits \
 	li_boost_shared_ptr_template \
+	li_boost_shared_ptr_attribute \
 	li_carrays \
 	li_cdata \
 	li_cpointer \
@@ -278,6 +280,7 @@ CPP_TEST_CASES += \
 	nspace_extend \
 	naturalvar \
 	naturalvar_more \
+	naturalvar_onoff \
 	nested_class \
 	nested_comment \
 	nested_scope \
@@ -421,6 +424,7 @@ CPP_TEST_CASES += \
 	template_typedef_ns \
 	template_typedef_ptr \
 	template_typedef_rec \
+	template_typedef_typedef \
 	template_typemaps \
 	template_typemaps_typedef \
 	template_typemaps_typedef2 \
@@ -439,6 +443,7 @@ CPP_TEST_CASES += \
 	typedef_scope \
 	typedef_sizet \
 	typedef_struct \
+	typedef_typedef \
 	typemap_arrays \
 	typemap_array_qualifiers \
 	typemap_delete \
@@ -490,7 +495,9 @@ CPP11_TEST_CASES = \
 	cpp11_default_delete \
 	cpp11_delegating_constructors \
 	cpp11_explicit_conversion_operators \
+	cpp11_final_override \
 	cpp11_function_objects \
+	cpp11_inheriting_constructors \
 	cpp11_initializer_list \
 	cpp11_initializer_list_extend \
 	cpp11_lambda_functions \
@@ -502,7 +509,7 @@ CPP11_TEST_CASES = \
 	cpp11_rvalue_reference3 \
 	cpp11_sizeof_object \
 	cpp11_static_assert \
-	cpp11_strongly_typed_enumerations \
+	cpp11_thread_local \
 	cpp11_template_double_brackets \
 	cpp11_template_explicit \
 	cpp11_template_typedefs \
@@ -511,10 +518,9 @@ CPP11_TEST_CASES = \
 	cpp11_userdefined_literals \
 	cpp11_variadic_templates
 
-#	cpp11_inheriting_constructors \ # not supported by gcc-4.7
 #	cpp11_hash_tables \           # not fully implemented yet
 #	cpp11_result_of \             # SWIG does not support
-#	cpp11_thread_local \          # needs gcc-4.8
+#	cpp11_strongly_typed_enumerations \ # SWIG not quite getting this right yet in all langs
 
 # Broken C++11 test cases.
 CPP11_TEST_BROKEN = 
@@ -634,11 +640,20 @@ ALL_CLEAN = 		$(CPP_TEST_CASES:=.clean) \
 			$(C_TEST_BROKEN:=.clean)
 
 #######################################################################
+# Error test suite has its own set of test cases
+#######################################################################
+ifneq (,$(ERROR_TEST_CASES))
+check: $(ERROR_TEST_CASES)
+else
+
+#######################################################################
 # The following applies for all module languages
 #######################################################################
-all:	$(NOT_BROKEN_TEST_CASES) $(BROKEN_TEST_CASES)
+all: $(NOT_BROKEN_TEST_CASES) $(BROKEN_TEST_CASES)
 
-check: 	$(NOT_BROKEN_TEST_CASES)
+broken: $(BROKEN_TEST_CASES)
+
+check: $(NOT_BROKEN_TEST_CASES)
 
 check-c: $(C_TEST_CASES:=.ctest)
 
@@ -646,11 +661,11 @@ check-cpp: $(CPP_TEST_CASES:=.cpptest)
 
 check-cpp11: $(CPP11_TEST_CASES:=.cpptest)
 
+endif
+
 # partialcheck target runs SWIG only, ie no compilation or running of tests (for a subset of languages)
 partialcheck:
 	$(MAKE) check CC=true CXX=true LDSHARED=true CXXSHARED=true RUNTOOL=true COMPILETOOL=true
-
-broken: $(BROKEN_TEST_CASES)
 
 swig_and_compile_cpp =  \
 	$(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile CXXSRCS="$(CXXSRCS)" \

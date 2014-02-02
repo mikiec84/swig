@@ -1,11 +1,9 @@
 /* -----------------------------------------------------------------------------
  * director.swg
  *
- * This file contains support for director classes that proxy
- * method calls from C++ to Java extensions.
+ * This file contains support for director classes so that Java proxy
+ * methods can be called from C++.
  * ----------------------------------------------------------------------------- */
-
-#ifdef __cplusplus
 
 #if defined(DEBUG_DIRECTOR_OWNED) || defined(DEBUG_DIRECTOR_EXCEPTION)
 #include <iostream>
@@ -126,7 +124,7 @@ namespace Swig {
 #endif
         env_status = director_->swig_jvm_->GetEnv((void **)&jenv_, JNI_VERSION_1_2);
 #if defined(SWIG_JAVA_ATTACH_CURRENT_THREAD_AS_DAEMON)
-        // Attach a daemon thread to the JVM. Useful when the JVM should not wait for 
+        // Attach a daemon thread to the JVM. Useful when the JVM should not wait for
         // the thread to exit upon shutdown. Only for jdk-1.4 and later.
         director_->swig_jvm_->AttachCurrentThreadAsDaemon(jenv, NULL);
 #else
@@ -358,7 +356,7 @@ namespace Swig {
 
     if (throwable && jenv && classname) {
       // Exceptions need to be cleared for correct behavior.
-      // The caller of ExceptionMatches should restore pending exceptions if desired - 
+      // The caller of ExceptionMatches should restore pending exceptions if desired -
       // the caller already has the throwable.
       jenv->ExceptionClear();
 
@@ -384,4 +382,3 @@ namespace Swig {
 
 }
 
-#endif /* __cplusplus */
