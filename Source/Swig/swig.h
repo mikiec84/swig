@@ -335,7 +335,10 @@ extern int        ParmList_is_compactdefargs(ParmList *p);
   extern void Swig_offset_string(String *s, int number);
   extern String *Swig_pcre_version(void);
   extern void Swig_init(void);
+  extern void Swig_warn(const char *filename, int line, const char *msg);
+  
   extern int Swig_value_wrapper_mode(int mode);
+  extern int Swig_is_generated_overload(Node *n);
 
   typedef enum { EMF_STANDARD, EMF_MICROSOFT } ErrorMessageFormat;
 
@@ -374,7 +377,7 @@ extern int        ParmList_is_compactdefargs(ParmList *p);
 /* --- Transformations --- */
 
   extern int Swig_MethodToFunction(Node *n, const_String_or_char_ptr nspace, String *classname, int flags, SwigType *director_type, int is_director);
-  extern int Swig_ConstructorToFunction(Node *n, const_String_or_char_ptr nspace, String *classname, String *none_comparison, String *director_ctor, int cplus, int flags);
+  extern int Swig_ConstructorToFunction(Node *n, const_String_or_char_ptr nspace, String *classname, String *none_comparison, String *director_ctor, int cplus, int flags, String *directorname);
   extern int Swig_DestructorToFunction(Node *n, const_String_or_char_ptr nspace, String *classname, int cplus, int flags);
   extern int Swig_MembersetToFunction(Node *n, String *classname, int flags);
   extern int Swig_MembergetToFunction(Node *n, String *classname, int flags);
@@ -419,6 +422,13 @@ extern int        ParmList_is_compactdefargs(ParmList *p);
   extern void Swig_fragment_register(Node *fragment);
   extern void Swig_fragment_emit(String *name);
   extern void Swig_fragment_clear(String *section);
+
+/* --- Extension support --- */
+
+  extern Hash *Swig_extend_hash(void);
+  extern void Swig_extend_merge(Node *cls, Node *am);
+  extern void Swig_extend_append_previous(Node *cls, Node *am);
+  extern void Swig_extend_unused_check(void);
 
 /* hacks defined in C++ ! */
   extern int Swig_director_mode(void);

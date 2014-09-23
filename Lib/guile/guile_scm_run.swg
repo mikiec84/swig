@@ -27,8 +27,7 @@ scm_module_variable (SCM module, SCM sym)
 #endif
 
 #if SCM_MAJOR_VERSION >= 2
-// scm_c_define_gsubr takes a different parameter type
-// depending on the guile version
+/* scm_c_define_gsubr takes a different parameter type depending on the guile version */
 
 typedef scm_t_subr swig_guile_proc;
 #else
@@ -41,10 +40,14 @@ typedef struct swig_guile_clientdata {
   SCM goops_class;
 } swig_guile_clientdata;
 
+#if SCM_MAJOR_VERSION <= 2
+#define scm_to_utf8_string scm_to_locale_string
+#define scm_from_utf8_string scm_from_locale_string
+#endif
 #define SWIG_scm2str(s) \
   SWIG_Guile_scm2newstr(s, NULL)
 #define SWIG_str02scm(str) \
-  str ? scm_from_locale_string(str) : SCM_BOOL_F 
+  str ? scm_from_utf8_string(str) : SCM_BOOL_F 
 # define SWIG_malloc(size) \
   scm_malloc(size)
 # define SWIG_free(mem) \
@@ -84,21 +87,13 @@ SWIGINTERN char *
 SWIG_Guile_scm2newstr(SCM str, size_t *len) {
 #define FUNC_NAME "SWIG_Guile_scm2newstr"
   char *ret;
-  char *tmp;
-  size_t l;
 
   SCM_ASSERT (scm_is_string(str), str, 1, FUNC_NAME);
-  l = scm_c_string_length(str);
 
-  ret = (char *) SWIG_malloc( (l + 1) * sizeof(char));
+  ret = scm_to_utf8_string(str);
   if (!ret) return NULL;
 
-  tmp = scm_to_locale_string(str);
-  memcpy(ret, tmp, l);
-  free(tmp);
-
-  ret[l] = '\0';
-  if (len) *len = l;
+  if (len) *len = strlen(ret) - 1;
   return ret;
 #undef FUNC_NAME
 }
@@ -473,7 +468,7 @@ SWIG_Guile_GetArgs (SCM *dest, SCM rest,
   int num_args_passed = 0;
   for (i = 0; i<reqargs; i++) {
     if (!SCM_CONSP(rest))
-      scm_wrong_num_args(scm_from_locale_string(procname ? (char *) procname : "unknown procedure"));
+      scm_wrong_num_args(scm_from_utf8_string(procname ? (char *) procname : "unknown procedure"));
     *dest++ = SCM_CAR(rest);
     rest = SCM_CDR(rest);
     num_args_passed++;
@@ -486,7 +481,7 @@ SWIG_Guile_GetArgs (SCM *dest, SCM rest,
   for (; i<optargs; i++)
     *dest++ = SCM_UNDEFINED;
   if (!SCM_NULLP(rest))
-      scm_wrong_num_args(scm_from_locale_string(procname ? (char *) procname : "unknown procedure"));
+      scm_wrong_num_args(scm_from_utf8_string(procname ? (char *) procname : "unknown procedure"));
   return num_args_passed;
 }
 

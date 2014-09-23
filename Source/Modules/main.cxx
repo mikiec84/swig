@@ -49,6 +49,7 @@ int SwigRuntime = 0;		// 0 = no option, 1 = -runtime, 2 = -noruntime
 
 extern "C" {
   extern String *ModuleName;
+  extern int ignore_nested_classes;
 }
 
 /* usage string split into multiple parts otherwise string is too big for some compilers */
@@ -159,9 +160,9 @@ static String *SwigLib = 0; // Library directory
 static String *SwigLibWinUnix = 0; // Extra library directory on Windows
 static int freeze = 0;
 static String *lang_config = 0;
-static char *hpp_extension = (char *) "h";
-static char *cpp_extension = (char *) "cxx";
-static char *depends_extension = (char *) "d";
+static const char *hpp_extension = "h";
+static const char *cpp_extension = "cxx";
+static const char *depends_extension = "d";
 static String *outdir = 0;
 static String *xmlout = 0;
 static int outcurrentdir = 0;
@@ -323,7 +324,7 @@ const String *SWIG_output_directory() {
 }
 
 void SWIG_config_cppext(const char *ext) {
-  cpp_extension = (char *) ext;
+  cpp_extension = ext;
 }
 
 List *SWIG_output_files() {
@@ -464,7 +465,7 @@ void SWIG_getoptions(int argc, char *argv[]) {
 	Swig_mark_arg(i);
       } else if (strncmp(argv[i], "-D", 2) == 0) {
 	String *d = NewString(argv[i] + 2);
-	Replace(d, (char *) "=", (char *) " ", DOH_REPLACE_ANY | DOH_REPLACE_FIRST);
+	Replace(d, "=", " ", DOH_REPLACE_ANY | DOH_REPLACE_FIRST);
 	Preprocessor_define((DOH *) d, 0);
 	Delete(d);
 	// Create a symbol
@@ -856,11 +857,6 @@ void SWIG_getoptions(int argc, char *argv[]) {
   }
 }
 
-static void flatten_nested() {
-  Swig_feature_set(Swig_cparse_features(), "", 0, "feature:flatnested", "1", 0);
-}
-
-
 int SWIG_main(int argc, char *argv[], Language *l) {
   char *c;
 
@@ -904,6 +900,9 @@ int SWIG_main(int argc, char *argv[], Language *l) {
   /* Turn off directors mode */
   Wrapper_director_mode_set(0);
   Wrapper_director_protected_mode_set(1);
+
+  // Inform the parser if the nested classes should be ignored unless explicitly told otherwise via feature:flatnested
+  ignore_nested_classes = l->nestedClassesSupport() == Language::NCS_Unknown ? 1 : 0;
 
   // Create Library search directories
 
@@ -1158,10 +1157,6 @@ int SWIG_main(int argc, char *argv[], Language *l) {
       fflush(stdout);
     }
 
-    // add "ignore" directive if nested classes are not supported
-    if (!lang->nestedClassesSupported())
-      flatten_nested();
-
     Node *top = Swig_cparse(cpps);
 
     if (dump_top & STAGE1) {
@@ -1177,6 +1172,7 @@ int SWIG_main(int argc, char *argv[], Language *l) {
 	Printf(stdout, "Processing unnamed structs...\n");
       Swig_nested_name_unnamed_c_structs(top);
     }
+    Swig_extend_unused_check();
 
     if (Verbose) {
       Printf(stdout, "Processing types...\n");

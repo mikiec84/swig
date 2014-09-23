@@ -27,6 +27,7 @@ to work, see Byacc man page: http://invisible-island.net/byacc/manpage/yacc.html
 #include "preprocessor.h"
 #include <ctype.h>
 
+
 /* We do this for portability */
 #undef alloca
 #define alloca malloc
@@ -41,7 +42,6 @@ int  yyparse();
 
 static Node    *top = 0;      /* Top of the generated parse tree */
 static int      unnamed = 0;  /* Unnamed datatype counter */
-static Hash    *extendhash = 0;     /* Hash table of added methods */
 static Hash    *classes = 0;        /* Hash table of classes */
 static Hash    *classes_typedefs = 0; /* Hash table of typedef classes: typedef struct X {...} Y; */
 static Symtab  *prev_symtab = 0;
@@ -59,6 +59,59 @@ static int      extendmode   = 0;
 static int      compact_default_args = 0;
 static int      template_reduce = 0;
 static int      cparse_externc = 0;
+int		ignore_nested_classes = 0;
+/* -----------------------------------------------------------------------------
+ *                            Doxygen Comment Globals and Assist Functions
+ * ----------------------------------------------------------------------------- */
+static String *currentDeclComment = NULL; /* Comment of C/C++ declaration. */
+static Node *previousNode = NULL; /* Pointer to the previous node (for post comments) */
+static Node *currentNode = NULL; /* Pointer to the current node (for post comments) */
+
+int isStructuralDoxygen(String *s){
+	static const char* const structuralTags[] = {
+	  "addtogroup",
+	  "callgraph",
+	  "callergraph",
+	  "category",
+	  "def",
+	  "defgroup",
+	  "dir",
+	  "example",
+	  "file",
+	  "headerfile",
+	  "internal",
+	  "mainpage",
+	  "name",
+	  "nosubgrouping",
+	  "overload",
+	  "package",
+	  "page",
+	  "protocol",
+	  "relates",
+	  "relatesalso",
+	  "showinitializer",
+	  "weakgroup",
+	};
+
+	unsigned n;
+	char *slashPointer = Strchr(s, '\\');
+	char *atPointer = Strchr(s,'@');
+	if (slashPointer == NULL && atPointer == NULL) return 0;
+	else if( slashPointer == NULL) slashPointer = atPointer;
+
+	slashPointer++; /* skip backslash or at sign */
+
+	for (n = 0; n < sizeof(structuralTags)/sizeof(structuralTags[0]); n++) {
+	  const size_t len = strlen(structuralTags[n]);
+	  if (strncmp(slashPointer, structuralTags[n], len) == 0) {
+	    /* Take care to avoid false positives with prefixes of other tags. */
+	    if (slashPointer[len] == '\0' || isspace(slashPointer[len]))
+	      return 1;
+	  }
+	}
+
+	return 0;
+}
 
 /* -----------------------------------------------------------------------------
  *                            Assist Functions
@@ -76,6 +129,9 @@ static Node *new_node(const_String_or_char_ptr tag) {
   set_nodeType(n,tag);
   Setfile(n,cparse_file);
   Setline(n,cparse_line);
+  /* Remember the previous node in case it will need a post-comment */
+  previousNode = currentNode;
+  currentNode = n;
   return n;
 }
 
@@ -156,6 +212,36 @@ static Node *copy_node(Node *n) {
     Delete(ci);
   }
   return nn;
+}
+
+static void set_comment(Node *n, String *comment) {
+  String *name;
+  Parm *p;
+  if (!n || !comment)
+    return;
+
+  if (Getattr(n, "doxygen"))
+    Append(Getattr(n, "doxygen"), comment);
+  else {
+    Setattr(n, "doxygen", comment);
+    /* This is the first comment, populate it with @params, if any */
+    p = Getattr(n, "parms");
+    while (p) {
+      if (Getattr(p, "doxygen"))
+	Printv(comment, "\n@param ", Getattr(p, "name"), Getattr(p, "doxygen"), NIL);
+      p=nextSibling(p);
+    }
+  }
+  
+  /* Append same comment to every generated overload */
+  name = Getattr(n, "name");
+  if (!name)
+    return;
+  n = nextSibling(n);
+  while (n && Getattr(n, "name") && Strcmp(Getattr(n, "name"), name) == 0) {
+    Setattr(n, "doxygen", comment);
+    n = nextSibling(n);
+  }
 }
 
 /* -----------------------------------------------------------------------------
@@ -356,10 +442,17 @@ static void add_symbols(Node *n) {
 	  }
 	  Delete(prefix);
 	}
-
-	Setattr(n,"ismember","1");
       }
     }
+
+    if (!isfriend && (inclass || extendmode)) {
+      Setattr(n,"ismember","1");
+    }
+
+    if (extendmode) {
+      Setattr(n,"isextendmember","1");
+    }
+
     if (!isfriend && inclass) {
       if ((cplus_mode != CPLUS_PUBLIC)) {
 	only_csymbol = 1;
@@ -405,7 +498,7 @@ static void add_symbols(Node *n) {
 	    } else {
 	      ty = type;
 	    }
-	    if (!SwigType_ismutable(ty)) {
+	    if (!SwigType_ismutable(ty) || (storage && Strstr(storage, "constexpr"))) {
 	      SetFlag(n,"hasconsttype");
 	      SetFlag(n,"feature:immutable");
 	    }
@@ -640,106 +733,6 @@ static void add_symbols_copy(Node *n) {
       }
     }
     n = nextSibling(n);
-  }
-}
-
-/* Extension merge.  This function is used to handle the %extend directive
-   when it appears before a class definition.   To handle this, the %extend
-   actually needs to take precedence.  Therefore, we will selectively nuke symbols
-   from the current symbol table, replacing them with the added methods */
-
-static void merge_extensions(Node *cls, Node *am) {
-  Node *n;
-  Node *csym;
-
-  n = firstChild(am);
-  while (n) {
-    String *symname;
-    if (Strcmp(nodeType(n),"constructor") == 0) {
-      symname = Getattr(n,"sym:name");
-      if (symname) {
-	if (Strcmp(symname,Getattr(n,"name")) == 0) {
-	  /* If the name and the sym:name of a constructor are the same,
-             then it hasn't been renamed.  However---the name of the class
-             itself might have been renamed so we need to do a consistency
-             check here */
-	  if (Getattr(cls,"sym:name")) {
-	    Setattr(n,"sym:name", Getattr(cls,"sym:name"));
-	  }
-	}
-      } 
-    }
-
-    symname = Getattr(n,"sym:name");
-    DohIncref(symname);
-    if ((symname) && (!Getattr(n,"error"))) {
-      /* Remove node from its symbol table */
-      Swig_symbol_remove(n);
-      csym = Swig_symbol_add(symname,n);
-      if (csym != n) {
-	/* Conflict with previous definition.  Nuke previous definition */
-	String *e = NewStringEmpty();
-	String *en = NewStringEmpty();
-	String *ec = NewStringEmpty();
-	Printf(ec,"Identifier '%s' redefined by %%extend (ignored),",symname);
-	Printf(en,"%%extend definition of '%s'.",symname);
-	SWIG_WARN_NODE_BEGIN(n);
-	Swig_warning(WARN_PARSE_REDEFINED,Getfile(csym),Getline(csym),"%s\n",ec);
-	Swig_warning(WARN_PARSE_REDEFINED,Getfile(n),Getline(n),"%s\n",en);
-	SWIG_WARN_NODE_END(n);
-	Printf(e,"%s:%d:%s\n%s:%d:%s\n",Getfile(csym),Getline(csym),ec, 
-	       Getfile(n),Getline(n),en);
-	Setattr(csym,"error",e);
-	Delete(e);
-	Delete(en);
-	Delete(ec);
-	Swig_symbol_remove(csym);              /* Remove class definition */
-	Swig_symbol_add(symname,n);            /* Insert extend definition */
-      }
-    }
-    n = nextSibling(n);
-  }
-}
-
-static void append_previous_extension(Node *cls, Node *am) {
-  Node *n, *ne;
-  Node *pe = 0;
-  Node *ae = 0;
-
-  if (!am) return;
-  
-  n = firstChild(am);
-  while (n) {
-    ne = nextSibling(n);
-    set_nextSibling(n,0);
-    /* typemaps and fragments need to be prepended */
-    if (((Cmp(nodeType(n),"typemap") == 0) || (Cmp(nodeType(n),"fragment") == 0)))  {
-      if (!pe) pe = new_node("extend");
-      appendChild(pe, n);
-    } else {
-      if (!ae) ae = new_node("extend");
-      appendChild(ae, n);
-    }    
-    n = ne;
-  }
-  if (pe) prependChild(cls,pe);
-  if (ae) appendChild(cls,ae);
-}
- 
-
-/* Check for unused %extend.  Special case, don't report unused
-   extensions for templates */
- 
-static void check_extensions() {
-  Iterator ki;
-
-  if (!extendhash) return;
-  for (ki = First(extendhash); ki.key; ki = Next(ki)) {
-    if (!Strchr(ki.key,'<')) {
-      SWIG_WARN_NODE_BEGIN(ki.item);
-      Swig_warning(WARN_PARSE_EXTEND_UNDEF,Getfile(ki.item), Getline(ki.item), "%%extend defined for an undeclared class %s.\n", SwigType_namestr(ki.key));
-      SWIG_WARN_NODE_END(ki.item);
-    }
   }
 }
 
@@ -1069,6 +1062,74 @@ static void update_nested_classes(Node *n)
   }
 }
 
+/* -----------------------------------------------------------------------------
+ * nested_forward_declaration()
+ * 
+ * Nested struct handling for C++ code if the nested classes are disabled.
+ * Create the nested class/struct/union as a forward declaration.
+ * ----------------------------------------------------------------------------- */
+
+static Node *nested_forward_declaration(const char *storage, const char *kind, String *sname, String *name, Node *cpp_opt_declarators) {
+  Node *nn = 0;
+  int warned = 0;
+
+  if (sname) {
+    /* Add forward declaration of the nested type */
+    Node *n = new_node("classforward");
+    Setattr(n, "kind", kind);
+    Setattr(n, "name", sname);
+    Setattr(n, "storage", storage);
+    Setattr(n, "sym:weak", "1");
+    add_symbols(n);
+    nn = n;
+  }
+
+  /* Add any variable instances. Also add in any further typedefs of the nested type.
+     Note that anonymous typedefs (eg typedef struct {...} a, b;) are treated as class forward declarations */
+  if (cpp_opt_declarators) {
+    int storage_typedef = (storage && (strcmp(storage, "typedef") == 0));
+    int variable_of_anonymous_type = !sname && !storage_typedef;
+    if (!variable_of_anonymous_type) {
+      int anonymous_typedef = !sname && (storage && (strcmp(storage, "typedef") == 0));
+      Node *n = cpp_opt_declarators;
+      SwigType *type = name;
+      while (n) {
+	Setattr(n, "type", type);
+	Setattr(n, "storage", storage);
+	if (anonymous_typedef) {
+	  Setattr(n, "nodeType", "classforward");
+	  Setattr(n, "sym:weak", "1");
+	}
+	n = nextSibling(n);
+      }
+      add_symbols(cpp_opt_declarators);
+
+      if (nn) {
+	set_nextSibling(nn, cpp_opt_declarators);
+      } else {
+	nn = cpp_opt_declarators;
+      }
+    }
+  }
+
+  if (!GetFlag(currentOuterClass, "nested")) {
+    if (nn && Equal(nodeType(nn), "classforward")) {
+      Node *n = nn;
+      SWIG_WARN_NODE_BEGIN(n);
+      Swig_warning(WARN_PARSE_NAMED_NESTED_CLASS, cparse_file, cparse_line,"Nested %s not currently supported (%s ignored)\n", kind, sname ? sname : name);
+      SWIG_WARN_NODE_END(n);
+      warned = 1;
+    }
+
+    if (!warned) {
+      Swig_warning(WARN_PARSE_UNNAMED_NESTED_CLASS, cparse_file, cparse_line, "Nested %s not currently supported (ignored).\n", kind);
+    }
+  }
+
+  return nn;
+}
+
+
 Node *Swig_cparse(File *f) {
   scanner_file(f);
   top = 0;
@@ -1181,6 +1242,7 @@ static void default_arguments(Node *n) {
   Node *function = n;
 
   if (function) {
+
     ParmList *varargs = Getattr(function,"feature:varargs");
     if (varargs) {
       /* Handles the %varargs directive by looking for "feature:varargs" and 
@@ -1321,6 +1383,7 @@ static void mark_nodes_as_extend(Node *n) {
   for (; n; n = nextSibling(n)) {
     if (Getattr(n, "template") && Strcmp(nodeType(n), "class") == 0)
       continue;
+    /* Fix me: extend is not a feature. Replace with isextendmember? */
     Setattr(n, "feature:extend", "1");
     mark_nodes_as_extend(firstChild(n));
   }
@@ -1342,7 +1405,7 @@ static void mark_nodes_as_extend(Node *n) {
     String *nexcept;
   } dtype;
   struct {
-    char *type;
+    const char *type;
     String *filename;
     int   line;
   } loc;
@@ -1406,6 +1469,9 @@ static void mark_nodes_as_extend(Node *n) {
 %token <str> OPERATOR
 %token <str> COPERATOR
 %token PARSETYPE PARSEPARM PARSEPARMS
+%token <str> DOXYGENSTRING 
+%token <str> DOXYGENPOSTSTRING 
+%token <str> C_COMMENT_STRING 
 
 %left  CAST
 %left  QUESTIONMARK
@@ -1479,6 +1545,10 @@ static void mark_nodes_as_extend(Node *n) {
 %type <ptype>    type_specifier primitive_type_list ;
 %type <node>     fname stringtype;
 %type <node>     featattr;
+%type <str>	 doxygen_comment;
+%type <str>	 doxygen_comment_item;
+%type <str>	 doxygen_post_comment;
+%type <str>	 doxygen_post_comment_item;
 %type <node>     lambda_introducer lambda_body;
 %type <pl>       lambda_tail;
 %type <node>     optional_constant_directive;
@@ -1503,7 +1573,6 @@ program        :  interface {
 		     Setattr(module_node,"name",ModuleName);
 		   }
 		   Setattr($1,"module",module_node);
-		   check_extensions();
 	           top = $1;
                }
                | PARSETYPE parm SEMI {
@@ -1529,7 +1598,22 @@ program        :  interface {
 
 interface      : interface declaration {  
                    /* add declaration to end of linked list (the declaration isn't always a single declaration, sometimes it is a linked list itself) */
+                   if (currentDeclComment != NULL) {
+                       set_comment($2, currentDeclComment);
+                       currentDeclComment = NULL;
+                   }                                      
                    appendChild($1,$2);
+                   $$ = $1;
+               }
+               | interface doxygen_comment {
+                   currentDeclComment = $2; 
+                   $$ = $1;
+               }
+               | interface doxygen_post_comment {
+                   Node *node = lastChild($1);
+                   if (node) {
+                       set_comment(node, $2);
+                   }
                    $$ = $1;
                }
                | empty {
@@ -1562,7 +1646,6 @@ declaration    : swig_directive { $$ = $1; }
    COPERATOR token---discarding the rest of the definition. Ugh.
 
  */
-
                | error COPERATOR {
                   $$ = 0;
                   skip_decl();
@@ -1607,14 +1690,13 @@ extend_directive : EXTEND options idcolon LBRACE {
 	       cplus_mode = CPLUS_PUBLIC;
 	       if (!classes) classes = NewHash();
 	       if (!classes_typedefs) classes_typedefs = NewHash();
-	       if (!extendhash) extendhash = NewHash();
 	       clsname = make_class_name($3);
 	       cls = Getattr(classes,clsname);
 	       if (!cls) {
 	         cls = Getattr(classes_typedefs, clsname);
 		 if (!cls) {
 		   /* No previous definition. Create a new scope */
-		   Node *am = Getattr(extendhash,clsname);
+		   Node *am = Getattr(Swig_extend_hash(),clsname);
 		   if (!am) {
 		     Swig_symbol_newscope();
 		     Swig_symbol_setscopename($3);
@@ -1660,13 +1742,13 @@ extend_directive : EXTEND options idcolon LBRACE {
 		 appendChild(current_class,$$);
 	       } else {
 		 /* We store the extensions in the extensions hash */
-		 Node *am = Getattr(extendhash,clsname);
+		 Node *am = Getattr(Swig_extend_hash(),clsname);
 		 if (am) {
 		   /* Append the members to the previous extend methods */
 		   appendChild(am,$6);
 		 } else {
 		   appendChild($$,$6);
-		   Setattr(extendhash,clsname,$$);
+		   Setattr(Swig_extend_hash(),clsname,$$);
 		 }
 	       }
 	       current_class = 0;
@@ -1926,8 +2008,8 @@ include_directive: includetype options string BEGINFILE {
                }
                ;
 
-includetype    : INCLUDE { $$.type = (char *) "include"; }
-               | IMPORT  { $$.type = (char *) "import"; ++import_mode;}
+includetype    : INCLUDE { $$.type = "include"; }
+               | IMPORT  { $$.type = "import"; ++import_mode;}
                ;
 
 /* ------------------------------------------------------------
@@ -2749,8 +2831,7 @@ template_directive: SWIGTEMPLATE LPAREN idstringopt RPAREN idcolonnt LESSTHAN va
 
 			    /* !!! This may be broken.  We may have to add the
 			       %extend methods at the beginning of the class */
-
-                            if (extendhash) {
+                            {
                               String *stmp = 0;
                               String *clsname;
                               Node *am;
@@ -2759,32 +2840,32 @@ template_directive: SWIGTEMPLATE LPAREN idstringopt RPAREN idcolonnt LESSTHAN va
                               } else {
                                 clsname = Getattr(templnode,"name");
                               }
-                              am = Getattr(extendhash,clsname);
+                              am = Getattr(Swig_extend_hash(),clsname);
                               if (am) {
                                 Symtab *st = Swig_symbol_current();
                                 Swig_symbol_setscope(Getattr(templnode,"symtab"));
                                 /*			    Printf(stdout,"%s: %s %p %p\n", Getattr(templnode,"name"), clsname, Swig_symbol_current(), Getattr(templnode,"symtab")); */
-                                merge_extensions(templnode,am);
+                                Swig_extend_merge(templnode,am);
                                 Swig_symbol_setscope(st);
-				append_previous_extension(templnode,am);
-                                Delattr(extendhash,clsname);
+				Swig_extend_append_previous(templnode,am);
+                                Delattr(Swig_extend_hash(),clsname);
                               }
 			      if (stmp) Delete(stmp);
                             }
-                            /* Add to classes hash */
-                            if (!classes) classes = NewHash();
 
-                            {
-                              if (Namespaceprefix) {
-                                String *temp = NewStringf("%s::%s", Namespaceprefix, Getattr(templnode,"name"));
-                                Setattr(classes,temp,templnode);
-				Delete(temp);
-                              } else {
-				String *qs = Swig_symbol_qualifiedscopename(templnode);
-                                Setattr(classes, qs,templnode);
-				Delete(qs);
-                              }
-                            }
+                            /* Add to classes hash */
+			    if (!classes)
+			      classes = NewHash();
+
+			    if (Namespaceprefix) {
+			      String *temp = NewStringf("%s::%s", Namespaceprefix, Getattr(templnode,"name"));
+			      Setattr(classes,temp,templnode);
+			      Delete(temp);
+			    } else {
+			      String *qs = Swig_symbol_qualifiedscopename(templnode);
+			      Setattr(classes, qs,templnode);
+			      Delete(qs);
+			    }
                           }
                         }
 
@@ -2826,6 +2907,7 @@ warn_directive : WARN string {
 		  $$ = 0;
                }
                ;
+
 
 /* ======================================================================
  *                              C Parsing
@@ -3365,6 +3447,62 @@ c_constructor_decl : storage_class type LPAREN parms RPAREN ctor_end {
                 }
                 ;
 
+/* ------------------------------------------------------------
+   A Doxygen Comment (a string in Doxygen Format)
+   ------------------------------------------------------------ */
+
+doxygen_comment_item : DOXYGENSTRING {
+		  DohReplace($1, "/**", "", 0);
+		  DohReplace($1, "/*!", "", 0);
+		  DohReplace($1, "///", "", 0);
+		  DohReplace($1, "//!", "", 0);
+		  DohReplace($1, "*/", "", 0);
+
+		  /* Throw out all structural comments */
+		  if (isStructuralDoxygen($1)) {
+		    Delete($1);
+		    $1 = 0;
+		  }
+		  $$ = $1;
+		}
+		| doxygen_comment_item doxygen_comment_item {
+		  if ($1) {
+		    if ($2)
+		      Append($1, $2);
+		  }
+		  else {
+		    $1 = $2;
+		  }
+		  $$ = $1;
+		}
+		;
+
+doxygen_comment : doxygen_comment_item {
+                  $$ = $1;
+		}
+		;
+
+
+doxygen_post_comment_item : DOXYGENPOSTSTRING {
+		  DohReplace($1, "///<", "", 0);
+		  DohReplace($1, "/**<", "", 0);
+		  DohReplace($1, "/*!<", "", 0);
+		  DohReplace($1, "//!<", "", 0);
+		  DohReplace($1, "*/", "", 0);
+		  
+		  $$ = $1;
+		}
+		| doxygen_post_comment_item doxygen_post_comment_item {
+		  Append($1, $2);
+		  $$ = $1;
+		}
+		;
+
+doxygen_post_comment : doxygen_post_comment_item {
+                  $$ = $1;
+		}
+		;
+
 /* ======================================================================
  *                       C++ Support
  * ====================================================================== */
@@ -3412,6 +3550,7 @@ cpp_class_decl  : storage_class cpptype idcolon inherit LBRACE {
 		     Setattr($<node>$, "nested:outer", currentOuterClass);
 		     set_access_mode($<node>$);
 		   }
+		   Swig_features_get(Swig_cparse_features(), Namespaceprefix, Getattr($<node>$, "name"), 0, $<node>$);
 		   /* save yyrename to the class attribute, to be used later in add_symbols()*/
 		   Setattr($<node>$, "class_rename", make_name($<node>$, $3, 0));
 		   Setattr($<node>$, "Classprefix", $3);
@@ -3437,6 +3576,9 @@ cpp_class_decl  : storage_class cpptype idcolon inherit LBRACE {
 		     cplus_mode = CPLUS_PRIVATE;
 		   } else {
 		     cplus_mode = CPLUS_PUBLIC;
+		   }
+		   if (!cparse_cplusplus) {
+		     set_scope_to_global();
 		   }
 		   Swig_symbol_newscope();
 		   Swig_symbol_setscopename($3);
@@ -3492,13 +3634,12 @@ cpp_class_decl  : storage_class cpptype idcolon inherit LBRACE {
 		   Setattr($$,"abstracts", pure_abstracts($7));
 		   
 		   /* This bit of code merges in a previously defined %extend directive (if any) */
-		   
-		   if (extendhash) {
+		   {
 		     String *clsname = Swig_symbol_qualifiedscopename(0);
-		     am = Getattr(extendhash, clsname);
+		     am = Getattr(Swig_extend_hash(), clsname);
 		     if (am) {
-		       merge_extensions($$, am);
-		       Delattr(extendhash, clsname);
+		       Swig_extend_merge($$, am);
+		       Delattr(Swig_extend_hash(), clsname);
 		     }
 		     Delete(clsname);
 		   }
@@ -3509,7 +3650,7 @@ cpp_class_decl  : storage_class cpptype idcolon inherit LBRACE {
 		   appendChild($$, $7);
 		   
 		   if (am) 
-		     append_previous_extension($$, am);
+		     Swig_extend_append_previous($$, am);
 
 		   p = $9;
 		   if (p && !nscope_inner) {
@@ -3553,8 +3694,12 @@ cpp_class_decl  : storage_class cpptype idcolon inherit LBRACE {
 		   Setattr($$, "symtab", Swig_symbol_popscope());
 		   Classprefix = Getattr($<node>$, "Classprefix");
 		   Delattr($<node>$, "Classprefix");
+		   Delete(Namespaceprefix);
+		   Namespaceprefix = Swig_symbol_qualifiedscopename(0);
 		   if (cplus_mode == CPLUS_PRIVATE) {
 		     $$ = 0; /* skip private nested classes */
+		   } else if (cparse_cplusplus && currentOuterClass && ignore_nested_classes && !GetFlag($$, "feature:flatnested")) {
+		     $$ = nested_forward_declaration($1, $2, $3, Copy($3), $9);
 		   } else if (nscope_inner) {
 		     /* this is tricky */
 		     /* we add the declaration in the original namespace */
@@ -3572,16 +3717,15 @@ cpp_class_decl  : storage_class cpptype idcolon inherit LBRACE {
 		     add_symbols($9);
 		     if (nscope) {
 		       $$ = nscope; /* here we return recreated namespace tower instead of the class itself */
-		       if ($9)
+		       if ($9) {
 			 appendSibling($$, $9);
-		     }
-		     else if (!SwigType_istemplate(ty) && template_parameters == 0) /* for tempalte we need the class itself */
+		       }
+		     } else if (!SwigType_istemplate(ty) && template_parameters == 0) { /* for tempalte we need the class itself */
 		       $$ = $9;
+		     }
 		   } else {
 		     Delete(yyrename);
 		     yyrename = 0;
-		     Delete(Namespaceprefix);
-		     Namespaceprefix = Swig_symbol_qualifiedscopename(0);
 		     if (!cparse_cplusplus && currentOuterClass) { /* nested C structs go into global scope*/
 		       Node *outer = currentOuterClass;
 		       while (Getattr(outer, "nested:outer"))
@@ -3632,6 +3776,8 @@ cpp_class_decl  : storage_class cpptype idcolon inherit LBRACE {
 		 Setattr($<node>$, "nested:outer", currentOuterClass);
 		 set_access_mode($<node>$);
 	       }
+	       Swig_features_get(Swig_cparse_features(), Namespaceprefix, 0, 0, $<node>$);
+	       /* save yyrename to the class attribute, to be used later in add_symbols()*/
 	       Setattr($<node>$, "class_rename", make_name($<node>$,0,0));
 	       if (strcmp($2,"class") == 0) {
 		 cplus_mode = CPLUS_PRIVATE;
@@ -3665,7 +3811,13 @@ cpp_class_decl  : storage_class cpptype idcolon inherit LBRACE {
                /* Check for pure-abstract class */
 	       Setattr($$,"abstracts", pure_abstracts($6));
 	       n = $8;
-	       if (n) {
+	       if (cparse_cplusplus && currentOuterClass && ignore_nested_classes && !GetFlag($$, "feature:flatnested")) {
+		 String *name = n ? Copy(Getattr(n, "name")) : 0;
+		 $$ = nested_forward_declaration($1, $2, 0, name, n);
+		 Swig_symbol_popscope();
+	         Delete(Namespaceprefix);
+		 Namespaceprefix = Swig_symbol_qualifiedscopename(0);
+	       } else if (n) {
 	         appendSibling($$,n);
 		 /* If a proper typedef name was given, we'll use it to set the scope name */
 		 name = try_to_find_a_name_for_unnamed_structure($1, n);
@@ -3697,15 +3849,16 @@ cpp_class_decl  : storage_class cpptype idcolon inherit LBRACE {
 		     n = nextSibling(n);
 		   }
 		   n = $8;
-		     /* Check for previous extensions */
-		   if (extendhash) {
+
+		   /* Check for previous extensions */
+		   {
 		     String *clsname = Swig_symbol_qualifiedscopename(0);
-		     Node *am = Getattr(extendhash,clsname);
+		     Node *am = Getattr(Swig_extend_hash(),clsname);
 		     if (am) {
-			 /* Merge the extension into the symbol table */
-		       merge_extensions($$,am);
-		       append_previous_extension($$,am);
-		       Delattr(extendhash,clsname);
+		       /* Merge the extension into the symbol table */
+		       Swig_extend_merge($$,am);
+		       Swig_extend_append_previous($$,am);
+		       Delattr(Swig_extend_hash(),clsname);
 		     }
 		     Delete(clsname);
 		   }
@@ -4204,7 +4357,7 @@ cpp_namespace_decl : NAMESPACE idcolon LBRACE {
              | NAMESPACE LBRACE {
 	       Hash *h;
 	       $1 = Swig_symbol_current();
-	       h = Swig_symbol_clookup((char *)"    ",0);
+	       h = Swig_symbol_clookup("    ",0);
 	       if (h && (Strcmp(nodeType(h),"namespace") == 0)) {
 		 Swig_symbol_setscope(Getattr(h,"symtab"));
 	       } else {
@@ -4268,17 +4421,20 @@ cpp_members  : cpp_member cpp_members {
 		   }
              }
              | EXTEND LBRACE { 
-                  if (cplus_mode != CPLUS_PUBLIC) {
-		     Swig_error(cparse_file,cparse_line,"%%extend can only be used in a public section\n");
-		  }
-             } cpp_members RBRACE cpp_members {
+	       extendmode = 1;
+	       if (cplus_mode != CPLUS_PUBLIC) {
+		 Swig_error(cparse_file,cparse_line,"%%extend can only be used in a public section\n");
+	       }
+             } cpp_members RBRACE {
+	       extendmode = 0;
+	     } cpp_members {
 	       $$ = new_node("extend");
 	       mark_nodes_as_extend($4);
 	       appendChild($$,$4);
-	       set_nextSibling($$,$6);
+	       set_nextSibling($$,$7);
 	     }
-             | include_directive { $$ = $1; }
-             | empty { $$ = 0;}
+         | include_directive { $$ = $1; }
+         | empty { $$ = 0;}
 	     | error {
 	       int start_line = cparse_line;
 	       skip_decl();
@@ -4330,6 +4486,14 @@ cpp_member   : c_declaration { $$ = $1; }
              | fragment_directive {$$ = $1; }
              | types_directive {$$ = $1; }
              | SEMI { $$ = 0; }
+             | doxygen_comment cpp_member {
+	         $$ = $2;
+		 set_comment($2, $1);
+	     }
+             | cpp_member doxygen_post_comment {
+	         $$ = $1;
+		 set_comment($1, $2);
+	     }
              ;
 
 /* Possibly a constructor */
@@ -4686,10 +4850,10 @@ parms          : rawparms {
                  Parm *p;
 		 $$ = $1;
 		 p = $1;
-                 while (p) {
+		 while (p) {
 		   Replace(Getattr(p,"type"),"typename ", "", DOH_REPLACE_ANY);
 		   p = nextSibling(p);
-                 }
+		 }
                }
     	       ;
 
@@ -4697,13 +4861,18 @@ rawparms          : parm ptail {
                   set_nextSibling($1,$2);
                   $$ = $1;
 		}
-               | empty { $$ = 0; }
+               | empty { $$ = 0; previousNode = currentNode; currentNode=0; }
                ;
 
 ptail          : COMMA parm ptail {
                  set_nextSibling($2,$3);
 		 $$ = $2;
-                }
+               }
+	       | COMMA doxygen_post_comment parm ptail {
+		 set_comment(previousNode, $2);
+                 set_nextSibling($3,$4);
+		 $$ = $3;
+               }
                | empty { $$ = 0; }
                ;
 
@@ -4711,15 +4880,18 @@ ptail          : COMMA parm ptail {
 parm           : rawtype parameter_declarator {
                    SwigType_push($1,$2.type);
 		   $$ = NewParmWithoutFileLineInfo($1,$2.id);
+		   previousNode = currentNode;
+		   currentNode = $$;
 		   Setfile($$,cparse_file);
 		   Setline($$,cparse_line);
 		   if ($2.defarg) {
 		     Setattr($$,"value",$2.defarg);
 		   }
 		}
-
                 | TEMPLATE LESSTHAN cpptype GREATERTHAN cpptype idcolon def_args {
                   $$ = NewParmWithoutFileLineInfo(NewStringf("template<class> %s %s", $5,$6), 0);
+		  previousNode = currentNode;
+		  currentNode = $$;
 		  Setfile($$,cparse_file);
 		  Setline($$,cparse_line);
                   if ($7.val) {
@@ -4729,8 +4901,18 @@ parm           : rawtype parameter_declarator {
                 | PERIOD PERIOD PERIOD {
 		  SwigType *t = NewString("v(...)");
 		  $$ = NewParmWithoutFileLineInfo(t, 0);
+		  previousNode = currentNode;
+		  currentNode = $$;
 		  Setfile($$,cparse_file);
 		  Setline($$,cparse_line);
+		}
+		| doxygen_comment parm {
+		  $$ = $2;
+		  set_comment($2, $1);
+		}
+		| parm doxygen_post_comment {
+		  $$ = $1;
+		  set_comment($1, $2);
 		}
 		;
 
@@ -5180,7 +5362,7 @@ notso_direct_declarator : idcolon {
 		    SwigType *t;
 		    $$ = $1;
 		    t = NewStringEmpty();
-		    SwigType_add_array(t,(char*)"");
+		    SwigType_add_array(t,"");
 		    if ($$.type) {
 		      SwigType_push(t,$$.type);
 		      Delete($$.type);
@@ -5279,7 +5461,7 @@ direct_declarator : idcolon {
 		    SwigType *t;
 		    $$ = $1;
 		    t = NewStringEmpty();
-		    SwigType_add_array(t,(char*)"");
+		    SwigType_add_array(t,"");
 		    if ($$.type) {
 		      SwigType_push(t,$$.type);
 		      Delete($$.type);
@@ -5449,7 +5631,7 @@ direct_abstract_declarator : direct_abstract_declarator LBRACKET RBRACKET {
 		    SwigType *t;
 		    $$ = $1;
 		    t = NewStringEmpty();
-		    SwigType_add_array(t,(char*)"");
+		    SwigType_add_array(t,"");
 		    if ($$.type) {
 		      SwigType_push(t,$$.type);
 		      Delete($$.type);
@@ -5472,7 +5654,7 @@ direct_abstract_declarator : direct_abstract_declarator LBRACKET RBRACKET {
 		    $$.id = 0;
 		    $$.parms = 0;
 		    $$.have_parms = 0;
-		    SwigType_add_array($$.type,(char*)"");
+		    SwigType_add_array($$.type,"");
                   }
                   | LBRACKET expr RBRACKET { 
 		    $$.type = NewStringEmpty();
@@ -5857,6 +6039,19 @@ edecl          :  identifier {
 		   Setattr($$,"value",$1);
 		   Delete(type);
                  }
+		 | doxygen_comment edecl {
+		   $$ = $2;
+		   set_comment($2, $1);
+		 }
+		 | doxygen_post_comment edecl {
+		   $$ = $2;
+		   set_comment(previousNode, $1);
+		 }
+		 | edecl doxygen_post_comment {
+		   $$ = $1;
+		   set_comment($1, $2);
+		 }
+                 | empty { $$ = 0; previousNode = currentNode; currentNode = 0; }
                  ;
 
 etype            : expr {
@@ -6662,3 +6857,6 @@ ParmList *Swig_cparse_parms(String *s, Node *file_line_node) {
    return top;
 }
 
+
+
+struct S;

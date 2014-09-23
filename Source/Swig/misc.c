@@ -1244,7 +1244,8 @@ static void copy_with_maybe_case_conversion(String *dst, const char *src, int le
 
   /* If we must convert only the first character, do it and write the rest at once. */
   if (convertNextOnly) {
-    Putc(*convertCase == 1 ? toupper(*src) : tolower(*src), dst);
+    int src_char = *src;
+    Putc(*convertCase == 1 ? toupper(src_char) : tolower(src_char), dst);
     *convertCase = 0;
     if (len > 1) {
       Write(dst, src + 1, len - 1);
@@ -1253,7 +1254,8 @@ static void copy_with_maybe_case_conversion(String *dst, const char *src, int le
     /* We need to convert all characters. */
     int i;
     for (i = 0; i < len; i++, src++) {
-      Putc(*convertCase == 1 ? toupper(*src) : tolower(*src), dst);
+      int src_char = *src;
+      Putc(*convertCase == 1 ? toupper(src_char) : tolower(src_char), dst);
     }
   }
 }
@@ -1380,6 +1382,17 @@ String *Swig_pcre_version(void) {
 }
 
 #endif
+
+/* ------------------------------------------------------------
+ * Swig_is_generated_overload()
+ * Check if the function is an automatically generated
+ * overload created because a method has default parameters. 
+ * ------------------------------------------------------------ */
+int Swig_is_generated_overload(Node *n) {
+  Node *base_method = Getattr(n, "sym:overloaded");
+  Node *default_args = Getattr(n, "defaultargs");
+  return ((base_method != NULL) && (default_args != NULL) && (base_method == default_args));
+}
 
 /* -----------------------------------------------------------------------------
  * Swig_init()

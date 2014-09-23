@@ -7,6 +7,7 @@ JAVA         = @JAVA@
 JAVAC        = @JAVAC@
 JAVAFLAGS    = -Xcheck:jni
 SCRIPTSUFFIX = _runme.java
+
 srcdir       = @srcdir@
 top_srcdir   = ../@top_srcdir@
 top_builddir = ../@top_builddir@
@@ -39,9 +40,16 @@ CPP_TEST_CASES = \
 	java_typemaps_typewrapper
 #	li_boost_intrusive_ptr
 
+DOXYGEN_TEST_CASES := \
+	doxygen_parsing_enums_simple \
+	doxygen_parsing_enums_proper \
+	doxygen_parsing_enums_typesafe \
+	doxygen_parsing_enums_typeunsafe \
+
 include $(srcdir)/../common.mk
 
 # Overridden variables here
+SRCDIR       = ../$(srcdir)/
 JAVA_PACKAGE = $*
 JAVA_PACKAGEOPT = -package $(JAVA_PACKAGE)
 SWIGOPT += $(JAVA_PACKAGEOPT)
@@ -53,9 +61,10 @@ nspace.%: JAVA_PACKAGE = $*Package
 nspace_extend.%: JAVA_PACKAGE = $*Package
 director_nspace.%: JAVA_PACKAGE = $*Package
 director_nspace_director_name_collision.%: JAVA_PACKAGE = $*Package
+doxygen_misc_constructs.%: INCLUDES = -I../$(srcdir)/..
 
 # Rules for the different types of tests
-%.cpptest: 
+%.cpptest:
 	$(setup)
 	+(cd $(JAVA_PACKAGE) && $(swig_and_compile_cpp))
 	$(run_testcase)
@@ -65,30 +74,36 @@ director_nspace_director_name_collision.%: JAVA_PACKAGE = $*Package
 	+(cd $(JAVA_PACKAGE) && $(swig_and_compile_c))
 	$(run_testcase)
 
-%.multicpptest: 
+%.multicpptest:
 	$(setup)
 	+(cd $(JAVA_PACKAGE) && $(swig_and_compile_multi_cpp))
 	$(run_testcase)
 
 # Makes a directory for the testcase if it does not exist
 setup = \
-	if [ -f $(srcdir)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) ]; then	  \
-	  echo "$(ACTION)ing testcase $* (with run test) under $(LANGUAGE)" ; \
+	if [ -f $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) ]; then	  \
+	  echo "$(ACTION)ing $(LANGUAGE) testcase $* (with run test)" ; \
 	else								  \
-	  echo "$(ACTION)ing testcase $* under $(LANGUAGE)" ;		  \
+	  echo "$(ACTION)ing $(LANGUAGE) testcase $*" ;			  \
 	fi;								  \
 	if [ ! -d $(JAVA_PACKAGE) ]; then						  \
 	  mkdir $(JAVA_PACKAGE);							  \
 	fi
+
+# Doxygen test cases need to be compiled together with the CommentsParser class
+# which depends on com.sun.javadoc package which is located in this JAR.
+JAVA_CLASSPATH := .
+$(DOXYGEN_TEST_CASES:=.cpptest): JAVA_CLASSPATH := $(JAVA_HOME)/lib/tools.jar:.
+$(DOXYGEN_TEST_CASES:=.cpptest): DOXYGEN_COMMENT_PARSER := $(srcdir)/CommentParser.java
 
 # Compiles java files then runs the testcase. A testcase is only run if
 # a file is found which has _runme.java appended after the testcase name.
 # Note Java uses LD_LIBRARY_PATH under Unix, PATH under Cygwin/Windows, SHLIB_PATH on HPUX and DYLD_LIBRARY_PATH on Mac OS X.
 run_testcase = \
 	cd $(JAVA_PACKAGE) && $(COMPILETOOL) $(JAVAC) -classpath . `find . -name "*.java"` && cd .. && \
-	if [ -f $(srcdir)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) ]; then \
-	  $(COMPILETOOL) $(JAVAC) -classpath . -d . $(srcdir)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) && \
-	  env LD_LIBRARY_PATH="$(JAVA_PACKAGE):$$LD_LIBRARY_PATH" PATH="$(JAVA_PACKAGE):$$PATH" SHLIB_PATH="$(JAVA_PACKAGE):$$SHLIB_PATH" DYLD_LIBRARY_PATH="$(JAVA_PACKAGE):$$DYLD_LIBRARY_PATH" $(RUNTOOL) $(JAVA) $(JAVAFLAGS) -classpath . $*_runme; \
+	if [ -f $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) ]; then \
+	  $(COMPILETOOL) $(JAVAC) -classpath $(JAVA_CLASSPATH) -d . $(DOXYGEN_COMMENT_PARSER) $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) && \
+	  env LD_LIBRARY_PATH="$(JAVA_PACKAGE):$$LD_LIBRARY_PATH" PATH="$(JAVA_PACKAGE):$$PATH" SHLIB_PATH="$(JAVA_PACKAGE):$$SHLIB_PATH" DYLD_LIBRARY_PATH="$(JAVA_PACKAGE):$$DYLD_LIBRARY_PATH" $(RUNTOOL) $(JAVA) $(JAVAFLAGS) -classpath $(JAVA_CLASSPATH) $*_runme; \
 	fi
 
 # Clean: remove testcase directories
