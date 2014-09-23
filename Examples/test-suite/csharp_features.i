@@ -22,8 +22,8 @@ class MoreDerived : public Derived {
 public:
   int variable;
   // test wide char literals support for C# module
-  void methodWithDefault(const wchar_t* s = L"literal"){}
-	static const wchar_t* const wideCharLiteral = L"more wide chars with escapes \x1234\2336";
+  void methodWithDefault1(const wchar_t* s = L"literal with escapes \x1234"){}
+  void methodWithDefault2(wchar_t c = L'\x1234'){}
 };
 %}
 

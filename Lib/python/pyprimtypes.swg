@@ -12,6 +12,8 @@ SWIGINTERNINLINE PyObject*
 }
 }
 
+#ifdef SWIG_PYTHON_LEGACY_BOOL
+// Default prior to SWIG 3.0.0
 %fragment(SWIG_AsVal_frag(bool),"header",
 	  fragment=SWIG_AsVal_frag(long)) {
 SWIGINTERN int
@@ -24,6 +26,23 @@ SWIG_AsVal_dec(bool)(PyObject *obj, bool *val)
   return SWIG_OK;
 }
 }
+#else
+%fragment(SWIG_AsVal_frag(bool),"header",
+	  fragment=SWIG_AsVal_frag(long)) {
+SWIGINTERN int
+SWIG_AsVal_dec(bool)(PyObject *obj, bool *val)
+{
+  int r;
+  if (!PyBool_Check(obj))
+    return SWIG_ERROR;
+  r = PyObject_IsTrue(obj);
+  if (r == -1)
+    return SWIG_ERROR;
+  if (val) *val = r ? true : false;
+  return SWIG_OK;
+}
+}
+#endif
 
 /* int */
 
@@ -127,6 +146,18 @@ SWIG_AsVal_dec(unsigned long)(PyObject *obj, unsigned long *val)
       return SWIG_OK;
     } else {
       PyErr_Clear();
+%#if PY_VERSION_HEX >= 0x03000000
+      {
+        long v = PyLong_AsLong(obj);
+        if (!PyErr_Occurred()) {
+          if (v < 0) {
+            return SWIG_OverflowError;
+          }
+        } else {
+          PyErr_Clear();
+        }
+      }
+%#endif
     }
   }
 %#ifdef SWIG_PYTHON_CAST_MODE

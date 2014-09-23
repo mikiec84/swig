@@ -4,12 +4,12 @@ CXXSRCS    = example.cxx
 TARGET     = example
 INTERFACE  = example.i
 
-all::
-	$(MAKE) -f $(TOP)/Makefile CXXSRCS='$(CXXSRCS)' SWIG='$(SWIG)' \
+check: build
+	$(MAKE) -f $(TOP)/Makefile SRCDIR='$(SRCDIR)' r_run
+
+build:
+	$(MAKE) -f $(TOP)/Makefile SRCDIR='$(SRCDIR)' CXXSRCS='$(CXXSRCS)' SWIG='$(SWIG)' \
 	TARGET='$(TARGET)' INTERFACE='$(INTERFACE)' r_cpp
 
-clean::
-	$(MAKE) -f $(TOP)/Makefile INTERFACE='$(INTERFACE)' r_clean
-
-check: all
-	R CMD BATCH runme.R
+clean:
+	$(MAKE) -f $(TOP)/Makefile SRCDIR='$(SRCDIR)' INTERFACE='$(INTERFACE)' r_clean

@@ -1,20 +1,21 @@
 TOP        = ../..
 SWIG       = $(TOP)/../preinst-swig
-SRCS       = 
+SRCS       =
 TARGET     = example
 INTERFACE  = example.i
 LIBS       = -lm
-SWIGOPT    = 
+SWIGOPT    =
 
-all::
-	$(MAKE) -f $(TOP)/Makefile SRCS='$(SRCS)' SWIG='$(SWIG)' \
+check: build
+	$(MAKE) -f $(TOP)/Makefile SRCDIR='$(SRCDIR)' ruby_run
+
+build:
+	$(MAKE) -f $(TOP)/Makefile SRCDIR='$(SRCDIR)' SRCS='$(SRCS)' SWIG='$(SWIG)' \
 	SWIGOPT='$(SWIGOPT)' TARGET='$(TARGET)' INTERFACE='$(INTERFACE)' ruby
 
-static::
-	$(MAKE) -f $(TOP)/Makefile SRCS='$(SRCS)' SWIG='$(SWIG)' \
+static:
+	$(MAKE) -f $(TOP)/Makefile SRCDIR='$(SRCDIR)' SRCS='$(SRCS)' SWIG='$(SWIG)' \
 	TARGET='myruby' INTERFACE='$(INTERFACE)' ruby_static
 
-clean::
-	$(MAKE) -f $(TOP)/Makefile ruby_clean
-
-check: all
+clean:
+	$(MAKE) -f $(TOP)/Makefile SRCDIR='$(SRCDIR)' ruby_clean

@@ -421,7 +421,7 @@ class Allocate:public Dispatcher {
 		while (cc) {
 		  Node *cp = cc;
 		  if (classname) {
-		    Setattr(cp, "classname", classname);
+		    Setattr(cp, "extendsmartclassname", classname);
 		  }
 		  Setattr(cp, "allocate:smartpointeraccess", "1");
 		  /* If constant, we have to be careful */
@@ -559,9 +559,11 @@ Allocate():
   virtual int classDeclaration(Node *n) {
     Symtab *symtab = Swig_symbol_current();
     Swig_symbol_setscope(Getattr(n, "symtab"));
-    Node* oldInclass = inclass;
-    AccessMode oldAcessMode = cplus_mode;
-
+    save_value<Node*> oldInclass(inclass);
+    save_value<AccessMode> oldAcessMode(cplus_mode);
+    save_value<int> oldExtendMode(extendmode);
+    if (Getattr(n, "template"))
+      extendmode = 0;
     if (!CPlusPlus) {
       /* Always have default constructors/destructors in C */
       Setattr(n, "allocate:default_constructor", "1");
@@ -660,7 +662,7 @@ Allocate():
     }
 
     if (!Getattr(n, "allocate:has_destructor")) {
-      /* No destructor was defined.  We need to check a few things here too */
+      /* No destructor was defined */
       List *bases = Getattr(n, "allbases");
       int allows_destruct = 1;
 
@@ -677,13 +679,13 @@ Allocate():
     }
 
     if (!Getattr(n, "allocate:has_assign")) {
-      /* No destructor was defined.  We need to check a few things here too */
+      /* No assignment operator was defined */
       List *bases = Getattr(n, "allbases");
       int allows_assign = 1;
 
       for (int i = 0; i < Len(bases); i++) {
 	Node *n = Getitem(bases, i);
-	/* If base class does not allow default destructor, we don't allow it either */
+	/* If base class does not allow assignment, we don't allow it either */
 	if (Getattr(n, "allocate:has_assign")) {
 	  allows_assign = !Getattr(n, "allocate:noassign");
 	}
@@ -694,13 +696,13 @@ Allocate():
     }
 
     if (!Getattr(n, "allocate:has_new")) {
-      /* No destructor was defined.  We need to check a few things here too */
+      /* No new operator was defined */
       List *bases = Getattr(n, "allbases");
       int allows_new = 1;
 
       for (int i = 0; i < Len(bases); i++) {
 	Node *n = Getitem(bases, i);
-	/* If base class does not allow default destructor, we don't allow it either */
+	/* If base class does not allow new operator, we don't allow it either */
 	if (Getattr(n, "allocate:has_new")) {
 	  allows_new = !Getattr(n, "allocate:nonew");
 	}
@@ -712,7 +714,7 @@ Allocate():
 
     /* Check if base classes allow smart pointers, but might be hidden */
     if (!Getattr(n, "allocate:smartpointer")) {
-      Node *sp = Swig_symbol_clookup((char *) "operator ->", 0);
+      Node *sp = Swig_symbol_clookup("operator ->", 0);
       if (sp) {
 	/* Look for parent */
 	Node *p = parentNode(sp);
@@ -729,8 +731,6 @@ Allocate():
 
     /* Only care about default behavior.  Remove temporary values */
     Setattr(n, "allocate:visit", "1");
-    inclass = oldInclass;
-    cplus_mode = oldAcessMode;
     Swig_symbol_setscope(symtab);
     return SWIG_OK;
   }
@@ -773,7 +773,7 @@ Allocate():
       /* Check to see if this is a static member or not.  If so, we add an attribute
          cplus:staticbase that saves the current class */
 
-      if (checkAttribute(n, "storage", "static")) {
+      if (Swig_storage_isstatic(n)) {
 	Setattr(n, "cplus:staticbase", inclass);
       }
 
@@ -781,18 +781,26 @@ Allocate():
       if (cplus_mode != PUBLIC) {
 	if (Strcmp(name, "operator =") == 0) {
 	  /* Look for a private assignment operator */
-	  Setattr(inclass, "allocate:has_assign", "1");
+	  if (!GetFlag(n, "deleted"))
+	    Setattr(inclass, "allocate:has_assign", "1");
 	  Setattr(inclass, "allocate:noassign", "1");
 	} else if (Strcmp(name, "operator new") == 0) {
 	  /* Look for a private new operator */
-	  Setattr(inclass, "allocate:has_new", "1");
+	  if (!GetFlag(n, "deleted"))
+	    Setattr(inclass, "allocate:has_new", "1");
 	  Setattr(inclass, "allocate:nonew", "1");
 	}
       } else {
 	if (Strcmp(name, "operator =") == 0) {
-	  Setattr(inclass, "allocate:has_assign", "1");
+	  if (!GetFlag(n, "deleted"))
+	    Setattr(inclass, "allocate:has_assign", "1");
+	  else
+	    Setattr(inclass, "allocate:noassign", "1");
 	} else if (Strcmp(name, "operator new") == 0) {
-	  Setattr(inclass, "allocate:has_new", "1");
+	  if (!GetFlag(n, "deleted"))
+	    Setattr(inclass, "allocate:has_new", "1");
+	  else
+	    Setattr(inclass, "allocate:nonew", "1");
 	}
 	/* Look for smart pointer operator */
 	if ((Strcmp(name, "operator ->") == 0) && (!GetFlag(n, "feature:ignore"))) {
@@ -819,13 +827,13 @@ Allocate():
 		  }
 		  List *methods = smart_pointer_methods(sc, 0, isconst);
 		  Setattr(inclass, "allocate:smartpointer", methods);
-		  Setattr(inclass, "allocate:smartpointerbase", base);
+		  Setattr(inclass, "allocate:smartpointerpointeeclassname", Getattr(sc, "name"));
 		} else {
 		  /* Hmmm.  The return value is not a pointer.  If the type is a value
 		     or reference.  We're going to chase it to see if another operator->()
 		     can be found */
 		  if ((SwigType_check_decl(type, "")) || (SwigType_check_decl(type, "r."))) {
-		    Node *nn = Swig_symbol_clookup((char *) "operator ->", Getattr(sc, "symtab"));
+		    Node *nn = Swig_symbol_clookup("operator ->", Getattr(sc, "symtab"));
 		    if (nn) {
 		      Delete(base);
 		      Delete(type);

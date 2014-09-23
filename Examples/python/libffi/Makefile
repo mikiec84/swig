@@ -1,20 +1,19 @@
 TOP        = ../..
 SWIG       = $(TOP)/../preinst-swig
-SRCS       = 
+SRCS       =
 TARGET     = example
 INTERFACE  = example.i
 
-all::
-	$(MAKE) -f $(TOP)/Makefile SRCS='$(SRCS)' SWIG='$(SWIG)' \
+check: build
+	$(MAKE) -f $(TOP)/Makefile SRCDIR='$(SRCDIR)' python_run
+
+build:
+	$(MAKE) -f $(TOP)/Makefile SRCDIR='$(SRCDIR)' SRCS='$(SRCS)' SWIG='$(SWIG)' \
 	TARGET='$(TARGET)' INTERFACE='$(INTERFACE)' LIBS='-L/usr/local/lib -lffi' python
 
-static::
-	$(MAKE) -f $(TOP)/Makefile SRCS='$(SRCS)' SWIG='$(SWIG)' \
+static:
+	$(MAKE) -f $(TOP)/Makefile SRCDIR='$(SRCDIR)' SRCS='$(SRCS)' SWIG='$(SWIG)' \
 	TARGET='mypython' INTERFACE='$(INTERFACE)' python_static
 
-clean::
-	$(MAKE) -f $(TOP)/Makefile python_clean
-	rm -f $(TARGET).py
-
-check: all
-	$(MAKE) -f $(TOP)/Makefile python_run
+clean:
+	$(MAKE) -f $(TOP)/Makefile SRCDIR='$(SRCDIR)' TARGET='$(TARGET)' python_clean

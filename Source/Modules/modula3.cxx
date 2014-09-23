@@ -204,9 +204,6 @@ private:
   String *proxy_class_name;
   String *variable_name;	//Name of a variable being wrapped
   String *variable_type;	//Type of this variable
-  String *enumeration_name;	//Name of the current enumeration type
-  Hash *enumeration_items;	//and its members
-  int enumeration_max;
   Hash *enumeration_coll;	//Collection of all enumerations.
   /* The items are nodes with members:
      "items"  - hash of with key 'itemname' and content 'itemvalue'
@@ -268,9 +265,6 @@ MODULA3():
       proxy_class_name(NULL),
       variable_name(NULL),
       variable_type(NULL),
-      enumeration_name(NULL),
-      enumeration_items(NULL),
-      enumeration_max(0),
       enumeration_coll(NULL),
       constant_values(NULL),
       constantfilename(NULL),
@@ -1783,19 +1777,6 @@ MODULA3():
       Printf(m3wrap_intf.f, "%s = %s;\n", name, value);
     }
   }
-
-#if 0
-  void generateEnumerationItem(const String *name, const String *value, int numvalue) {
-    String *oldsymname = Getattr(enumeration_items, value);
-    if (oldsymname != NIL) {
-      Swig_warning(WARN_MODULA3_BAD_ENUMERATION, input_file, line_number, "The value <%s> is already assigned to <%s>.\n", value, oldsymname);
-    }
-    Setattr(enumeration_items, value, name);
-    if (enumeration_max < numvalue) {
-      enumeration_max = numvalue;
-    }
-  }
-#endif
 
   void emitEnumeration(File *file, String *name, Node *n) {
     Printf(file, "%s = {", name);
@@ -3641,35 +3622,6 @@ MODULA3():
   }
 
   /* -----------------------------------------------------------------------------
-   * makeParameterName()
-   *
-   * Inputs: 
-   *   n - Node
-   *   p - parameter node
-   *   arg_num - parameter argument number
-   * Return:
-   *   arg - a unique parameter name
-   * ----------------------------------------------------------------------------- */
-
-  String *makeParameterName(Node *n, Parm *p, int arg_num) {
-
-    // Use C parameter name unless it is a duplicate or an empty parameter name
-    String *pn = Getattr(p, "name");
-    int count = 0;
-    ParmList *plist = Getattr(n, "parms");
-    while (plist) {
-      if ((Cmp(pn, Getattr(plist, "name")) == 0))
-	count++;
-      plist = nextSibling(plist);
-    }
-    String *arg = (!pn || (count > 1)) ? NewStringf("arg%d",
-						    arg_num) : Copy(Getattr(p,
-									    "name"));
-
-    return arg;
-  }
-
-  /* -----------------------------------------------------------------------------
    * attachParameterNames()
    *
    * Inputs: 
@@ -3975,7 +3927,7 @@ extern "C" Language *swig_modula3(void) {
  * Static member variables
  * ----------------------------------------------------------------------------- */
 
-const char *MODULA3::usage = (char *) "\
+const char *MODULA3::usage = "\
 Modula 3 Options (available with -modula3)\n\
      -generateconst <file>   - Generate code for computing numeric values of constants\n\
      -generaterename <file>  - Generate suggestions for %rename\n\

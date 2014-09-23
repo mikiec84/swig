@@ -89,6 +89,7 @@ class CSHARP:public Language {
   int n_directors;
   int first_class_dmethod;
   int curr_class_dmethod;
+  int nesting_depth;
 
   enum EnumFeature { SimpleEnum, TypeunsafeEnum, TypesafeEnum, ProperEnum };
 
@@ -158,7 +159,8 @@ public:
       n_dmethods(0),
       n_directors(0),
       first_class_dmethod(0),
-      curr_class_dmethod(0) {
+      curr_class_dmethod(0),
+      nesting_depth(0){
     /* for now, multiple inheritance in directors is disabled, this
        should be easy to implement though */
     director_multiple_inheritance = 0;
@@ -182,8 +184,8 @@ public:
 	 if (!proxyname) {
 	   String *nspace = Getattr(n, "sym:nspace");
 	   String *symname = Copy(Getattr(n, "sym:name"));
-	   if (!GetFlag(n, "feature:flatnested")) {
-	     for (Node* outer_class = Getattr(n, "nested:outer");outer_class;outer_class = Getattr(outer_class, "nested:outer")) {
+	   if (symname && !GetFlag(n, "feature:flatnested")) {
+	     for (Node *outer_class = Getattr(n, "nested:outer"); outer_class; outer_class = Getattr(outer_class, "nested:outer")) {
 	       Push(symname, ".");
 	       Push(symname, Getattr(outer_class, "sym:name"));
 	     }
@@ -204,26 +206,6 @@ public:
      }
      return proxyname;
    }
-
-  /* -----------------------------------------------------------------------------
-   * directorClassName()
-   * ----------------------------------------------------------------------------- */
-
-  String *directorClassName(Node *n) {
-    String *dirclassname;
-    const char *attrib = "director:classname";
-
-    if (!(dirclassname = Getattr(n, attrib))) {
-      String *classname = getClassPrefix();
-
-      dirclassname = NewStringf("SwigDirector_%s", classname);
-      Setattr(n, attrib, dirclassname);
-    }
-    else 
-      dirclassname = Copy(dirclassname);
-
-    return dirclassname;
-  }
 
   /* ------------------------------------------------------------
    * main()
@@ -805,7 +787,7 @@ public:
       }
     }
 
-    Printv(imclass_class_code, "\n  [DllImport(\"", dllimport, "\", EntryPoint=\"", wname, "\")]\n", NIL);
+    Printv(imclass_class_code, "\n  [global::System.Runtime.InteropServices.DllImport(\"", dllimport, "\", EntryPoint=\"", wname, "\")]\n", NIL);
 
     if (im_outattributes)
       Printf(imclass_class_code, "  %s\n", im_outattributes);
@@ -1109,6 +1091,30 @@ public:
 
     return ret;
   }
+  
+  String *getCurrentScopeName(String *nspace)
+  {
+    String *scope = 0;
+    if (nspace || getCurrentClass()) {
+      scope = NewString("");
+      if (nspace)
+	Printf(scope, "%s", nspace);
+      if (Node* cls = getCurrentClass())
+      {
+	if (Node *outer = Getattr(cls, "nested:outer")) {
+	  String *outerClassesPrefix = Copy(Getattr(outer, "sym:name"));
+	  for (outer = Getattr(outer, "nested:outer"); outer != 0; outer = Getattr(outer, "nested:outer")) {
+	    Push(outerClassesPrefix, ".");
+	    Push(outerClassesPrefix, Getattr(outer, "sym:name"));
+	  }
+	  Printv(scope, nspace ? "." : "", outerClassesPrefix, ".", proxy_class_name, NIL);
+	  Delete(outerClassesPrefix);
+	} else
+	  Printv(scope, nspace ? "." : "", proxy_class_name, NIL);
+      }
+    }
+    return scope;
+  }
 
   /* ----------------------------------------------------------------------
    * enumDeclaration()
@@ -1152,14 +1158,7 @@ public:
       if ((enum_feature != SimpleEnum) && symname && typemap_lookup_type) {
 	// Wrap (non-anonymous) C/C++ enum within a typesafe, typeunsafe or proper C# enum
 
-	String *scope = 0;
-	if (nspace || proxy_class_name) {
-	  scope = NewString("");
-	  if (nspace)
-	    Printf(scope, "%s", nspace);
-	  if (proxy_class_name)
-	    Printv(scope, nspace ? "." : "", proxy_class_name, NIL);
-	}
+	String *scope = getCurrentScopeName(nspace);
 	if (!addSymbol(symname, n, scope))
 	  return SWIG_ERROR;
 
@@ -1307,12 +1306,11 @@ public:
 	  scope = Copy(module_class_name);
 	}
       } else {
-	scope = NewString("");
-	if (nspace)
-	  Printf(scope, "%s.", nspace);
-	if (proxy_class_name)
-	  Printf(scope, "%s.", proxy_class_name);
-	Printf(scope, "%s",Getattr(parent, "sym:name"));
+	scope = getCurrentScopeName(nspace);
+	if (!scope)
+	  scope = Copy(Getattr(parent, "sym:name"));
+	else
+	  Printf(scope, ".%s", Getattr(parent, "sym:name"));
       }
       if (!addSymbol(name, n, scope))
 	return SWIG_ERROR;
@@ -1787,7 +1785,7 @@ public:
       if (*Char(destructor_call))
 	Replaceall(destruct, "$imcall", destructor_call);
       else
-	Replaceall(destruct, "$imcall", "throw new MethodAccessException(\"C++ destructor does not have public access\")");
+	Replaceall(destruct, "$imcall", "throw new global::System.MethodAccessException(\"C++ destructor does not have public access\")");
       if (*Char(destruct))
 	Printv(proxy_class_def, "\n  ", destruct_methodmodifiers, " ", derived ? "override" : "virtual", " void ", destruct_methodname, "() ", destruct, "\n",
 	       NIL);
@@ -1822,9 +1820,9 @@ public:
       if (first_class_dmethod < curr_class_dmethod) {
 	// Only emit if there is at least one director method
 	Printf(proxy_class_code, "\n");
-	Printf(proxy_class_code, "  private bool SwigDerivedClassHasMethod(string methodName, Type[] methodTypes) {\n");
+	Printf(proxy_class_code, "  private bool SwigDerivedClassHasMethod(string methodName, global::System.Type[] methodTypes) {\n");
 	Printf(proxy_class_code,
-	       "    System.Reflection.MethodInfo methodInfo = this.GetType().GetMethod(methodName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance, null, methodTypes, null);\n");
+	       "    global::System.Reflection.MethodInfo methodInfo = this.GetType().GetMethod(methodName, global::System.Reflection.BindingFlags.Public | global::System.Reflection.BindingFlags.NonPublic | global::System.Reflection.BindingFlags.Instance, null, methodTypes, null);\n");
 	Printf(proxy_class_code, "    bool hasDerivedMethod = methodInfo.DeclaringType.IsSubclassOf(typeof(%s));\n", proxy_class_name);
 	/* Could add this code to cover corner case where the GetMethod() returns a method which allows type
 	 * promotion, eg it will return foo(double), if looking for foo(int).
@@ -1890,8 +1888,8 @@ public:
       String *upcast_method = Swig_name_member(getNSpace(), getClassPrefix(), smartptr != 0 ? "SWIGSmartPtrUpcast" : "SWIGUpcast");
       String *wname = Swig_name_wrapper(upcast_method);
 
-      Printv(imclass_cppcasts_code, "\n  [DllImport(\"", dllimport, "\", EntryPoint=\"", wname, "\")]\n", NIL);
-      Printf(imclass_cppcasts_code, "  public static extern IntPtr %s(IntPtr jarg1);\n", upcast_method);
+      Printv(imclass_cppcasts_code, "\n  [global::System.Runtime.InteropServices.DllImport(\"", dllimport, "\", EntryPoint=\"", wname, "\")]\n", NIL);
+      Printf(imclass_cppcasts_code, "  public static extern global::System.IntPtr %s(global::System.IntPtr jarg1);\n", upcast_method);
 
       Replaceall(imclass_cppcasts_code, "$csclassname", proxy_class_name);
 
@@ -2003,23 +2001,24 @@ public:
     File *f_proxy = NULL;
     File *f_interface = NULL;
     // save class local variables
-    String* old_proxy_class_name = proxy_class_name;
-    String* old_full_imclass_name = full_imclass_name;
-    String* old_destructor_call = destructor_call;
-    String* old_proxy_class_constants_code = proxy_class_constants_code;
-    String* old_proxy_class_def = proxy_class_def;
-    String* old_proxy_class_code = proxy_class_code;
+    String *old_proxy_class_name = proxy_class_name;
+    String *old_full_imclass_name = full_imclass_name;
+    String *old_destructor_call = destructor_call;
+    String *old_proxy_class_constants_code = proxy_class_constants_code;
+    String *old_proxy_class_def = proxy_class_def;
+    String *old_proxy_class_code = proxy_class_code;
+    bool has_outerclass = Getattr(n, "nested:outer") && !GetFlag(n, "feature:flatnested");
     String *old_interface_class_code = interface_class_code;
     interface_class_code = 0;
     if (proxy_flag) {
       proxy_class_name = NewString(Getattr(n, "sym:name"));
-      if (Node* outer = Getattr(n, "nested:outer")) {
-	String* outerClassesPrefix = Copy(Getattr(outer, "sym:name"));
+      if (Node *outer = Getattr(n, "nested:outer")) {
+	String *outerClassesPrefix = Copy(Getattr(outer, "sym:name"));
 	for (outer = Getattr(outer, "nested:outer"); outer != 0; outer = Getattr(outer, "nested:outer")) {
-	  Push(outerClassesPrefix, "::");
+	  Push(outerClassesPrefix, ".");
 	  Push(outerClassesPrefix, Getattr(outer, "sym:name"));
 	}
-	String* fnspace = nspace ? NewStringf("%s::%s", nspace, outerClassesPrefix) : outerClassesPrefix;
+	String *fnspace = nspace ? NewStringf("%s.%s", nspace, outerClassesPrefix) : outerClassesPrefix;
 	if (!addSymbol(proxy_class_name, n, fnspace))
 	  return SWIG_ERROR;
 	if (nspace)
@@ -2050,9 +2049,8 @@ public:
 	}
       }
 
-      // inner class doesn't need this prologue
-      String *output_directory = outputDirectory(nspace);
-      if (!Getattr(n, "nested:outer")) {
+      // Each outer proxy class goes into a separate file
+      if (!has_outerclass) {
 	String *filen = NewStringf("%s%s.cs", output_directory, proxy_class_name);
 	f_proxy = NewFile(filen, "w", SWIG_output_files());
 	if (!f_proxy) {
@@ -2064,7 +2062,8 @@ public:
 	emitBanner(f_proxy);
 	addOpenNamespace(nspace, f_proxy);
       }
-
+      else
+	++nesting_depth;
       proxy_class_def = NewStringEmpty();
       proxy_class_code = NewStringEmpty();
       destructor_call = NewStringEmpty();
@@ -2137,13 +2136,12 @@ public:
       Replaceall(proxy_class_def, "$dllimport", dllimport);
       Replaceall(proxy_class_code, "$dllimport", dllimport);
       Replaceall(proxy_class_constants_code, "$dllimport", dllimport);
-      Replaceall(interface_class_code, "$dllimport", dllimport);
-
-      bool has_outerclass = Getattr(n, "nested:outer") != 0 && !GetFlag(n, "feature:flatnested");
       if (!has_outerclass)
 	Printv(f_proxy, proxy_class_def, proxy_class_code, NIL);
       else {
+	Swig_offset_string(proxy_class_def, nesting_depth);
 	Append(old_proxy_class_code, proxy_class_def);
+	Swig_offset_string(proxy_class_code, nesting_depth);
 	Append(old_proxy_class_code, proxy_class_code);
       }
 
@@ -2151,16 +2149,22 @@ public:
       if (Len(proxy_class_constants_code) != 0) {
 	if (!has_outerclass)
 	  Printv(f_proxy, proxy_class_constants_code, NIL);
-	else
+	else {
+	  Swig_offset_string(proxy_class_constants_code, nesting_depth);
 	  Append(old_proxy_class_code, proxy_class_constants_code);
+	}
       }
       if (!has_outerclass) {
 	Printf(f_proxy, "}\n");
 	addCloseNamespace(nspace, f_proxy);
 	Delete(f_proxy);
 	f_proxy = NULL;
-      } else
-	Append(old_proxy_class_code, "}\n");
+      } else {
+	for (int i = 0; i < nesting_depth; ++i)
+	  Append(old_proxy_class_code, "  ");
+	Append(old_proxy_class_code, "}\n\n");
+	--nesting_depth;
+      }
 
       if (f_interface) {
 	Printv(f_interface, interface_class_code, "}\n", NIL);
@@ -3338,62 +3342,37 @@ public:
    * ----------------------------------------------------------------------------- */
 
   void substituteClassnameSpecialVariable(SwigType *classnametype, String *tm, const char *classnamespecialvariable) {
+    String *replacementname;
     if (SwigType_isenum(classnametype)) {
       String *enumname = getEnumName(classnametype);
-      if (enumname)
-	Replaceall(tm, classnamespecialvariable, enumname);
-      else
-	Replaceall(tm, classnamespecialvariable, NewStringf("int"));
+      if (enumname) {
+	replacementname = Copy(enumname);
+      } else {
+	bool anonymous_enum = (Cmp(classnametype, "enum ") == 0);
+	if (anonymous_enum) {
+	  replacementname = NewString("int");
+	} else {
+	  // An unknown enum - one that has not been parsed (neither a C enum forward reference nor a definition) or an ignored enum
+	  replacementname = NewStringf("SWIGTYPE%s", SwigType_manglestr(classnametype));
+	  Replace(replacementname, "enum ", "", DOH_REPLACE_ANY);
+	  Setattr(swig_types_hash, replacementname, classnametype);
+	}
+      }
     } else {
-      String *classname = getProxyName(classnametype);
+      String *classname = getProxyName(classnametype); // getProxyName() works for pointers to classes too
       if (classname) {
-	Replaceall(tm, classnamespecialvariable, classname);	// getProxyName() works for pointers to classes too
-      } else {			// use $descriptor if SWIG does not know anything about this type. Note that any typedefs are resolved.
-	String *descriptor = NewStringf("SWIGTYPE%s", SwigType_manglestr(classnametype));
-	Replaceall(tm, classnamespecialvariable, descriptor);
+	replacementname = Copy(classname);
+      } else {
+	// use $descriptor if SWIG does not know anything about this type. Note that any typedefs are resolved.
+	replacementname = NewStringf("SWIGTYPE%s", SwigType_manglestr(classnametype));
 
 	// Add to hash table so that the type wrapper classes can be created later
-	Setattr(swig_types_hash, descriptor, classnametype);
-	Delete(descriptor);
+	Setattr(swig_types_hash, replacementname, classnametype);
       }
     }
-  }
+    Replaceall(tm, classnamespecialvariable, replacementname);
 
-  /* -----------------------------------------------------------------------------
-   * makeParameterName()
-   *
-   * Inputs: 
-   *   n - Node
-   *   p - parameter node
-   *   arg_num - parameter argument number
-   *   setter  - set this flag when wrapping variables
-   * Return:
-   *   arg - a unique parameter name
-   * ----------------------------------------------------------------------------- */
-
-  String *makeParameterName(Node *n, Parm *p, int arg_num, bool setter) {
-
-    String *arg = 0;
-    String *pn = Getattr(p, "name");
-
-    // Use C parameter name unless it is a duplicate or an empty parameter name
-    int count = 0;
-    ParmList *plist = Getattr(n, "parms");
-    while (plist) {
-      if ((Cmp(pn, Getattr(plist, "name")) == 0))
-        count++;
-      plist = nextSibling(plist);
-    }
-    String *wrn = pn ? Swig_name_warning(p, 0, pn, 0) : 0;
-    arg = (!pn || (count > 1) || wrn) ? NewStringf("arg%d", arg_num) : Copy(pn);
-
-    if (setter && Cmp(arg, "self") != 0) {
-      // Note that in C# properties, the input variable name is always called 'value'
-      Delete(arg);      
-      arg = NewString("value");
-    }
-
-    return arg;
+    Delete(replacementname);
   }
 
   /* -----------------------------------------------------------------------------
@@ -3445,6 +3424,9 @@ public:
     Replaceall(swigtype, "$module", module_class_name);
     Replaceall(swigtype, "$imclassname", imclass_name);
     Replaceall(swigtype, "$dllimport", dllimport);
+
+    // For unknown enums
+    Replaceall(swigtype, "$enumvalues", "");
 
     Printv(f_swigtype, swigtype, NIL);
 
@@ -3622,8 +3604,11 @@ public:
     String *sym_name = Getattr(n, "sym:name");
     String *qualified_classname = Copy(sym_name);
     String *nspace = getNSpace();
+    String *dirClassName = directorClassName(n);
+    String *smartptr = Getattr(n, "feature:smartptr");
     if (!GetFlag(n, "feature:flatnested")) {
-      for (Node* outer_class = Getattr(n, "nested:outer"); outer_class; outer_class = Getattr(outer_class, "nested:outer")) {
+      for (Node *outer_class = Getattr(n, "nested:outer"); outer_class; outer_class = Getattr(outer_class, "nested:outer")) {
+
 	Push(qualified_classname, ".");
 	Push(qualified_classname, Getattr(outer_class, "sym:name"));
       }
@@ -3631,14 +3616,23 @@ public:
     if (nspace)
       Insert(qualified_classname, 0, NewStringf("%s.", nspace));
 
-    Printv(imclass_class_code, "\n  [DllImport(\"", dllimport, "\", EntryPoint=\"", wname, "\")]\n", NIL);
-    Printf(imclass_class_code, "  public static extern void %s(HandleRef jarg1", swig_director_connect);
+    Printv(imclass_class_code, "\n  [global::System.Runtime.InteropServices.DllImport(\"", dllimport, "\", EntryPoint=\"", wname, "\")]\n", NIL);
+    Printf(imclass_class_code, "  public static extern void %s(global::System.Runtime.InteropServices.HandleRef jarg1", swig_director_connect);
 
     Wrapper *code_wrap = NewWrapper();
     Printf(code_wrap->def, "SWIGEXPORT void SWIGSTDCALL %s(void *objarg", wname);
 
-    Printf(code_wrap->code, "  %s *obj = (%s *)objarg;\n", norm_name, norm_name);
-    Printf(code_wrap->code, "  %s *director = dynamic_cast<%s *>(obj);\n", dirclassname, dirclassname);
+    if (Len(smartptr)) {
+      Printf(code_wrap->code, "  %s *obj = (%s *)objarg;\n", smartptr, smartptr);
+      Printf(code_wrap->code, "  // Keep a local instance of the smart pointer around while we are using the raw pointer\n");
+      Printf(code_wrap->code, "  // Avoids using smart pointer specific API.\n");
+      Printf(code_wrap->code, "  %s *director = dynamic_cast<%s *>(obj->operator->());\n", dirClassName, dirClassName);
+    }
+    else {
+      Printf(code_wrap->code, "  %s *obj = (%s *)objarg;\n", norm_name, norm_name);
+      Printf(code_wrap->code, "  %s *director = dynamic_cast<%s *>(obj);\n", dirClassName, dirClassName);
+    }
+
     // TODO: if statement not needed?? - Java too
     Printf(code_wrap->code, "  if (director) {\n");
     Printf(code_wrap->code, "    director->swig_connect_director(");
@@ -3906,7 +3900,7 @@ public:
 		Replaceall(pre, "$iminput", ln);
 		if (Len(pre_code) > 0)
 		  Printf(pre_code, "\n");
-		  Printv(pre_code, pre, NIL);
+		Printv(pre_code, pre, NIL);
 	      }
 	      String *post = Getattr(p, "tmap:csdirectorin:post");
 	      if (post) {
@@ -4152,7 +4146,7 @@ public:
 
       Printf(director_delegate_definitions, " SwigDelegate%s_%s(%s);\n", classname, methid, delegate_parms);
       Printf(director_delegate_instances, "  private SwigDelegate%s_%s swigDelegate%s;\n", classname, methid, methid);
-      Printf(director_method_types, "  private static Type[] swigMethodTypes%s = new Type[] { %s };\n", methid, proxy_method_types);
+      Printf(director_method_types, "  private static global::System.Type[] swigMethodTypes%s = new global::System.Type[] { %s };\n", methid, proxy_method_types);
       Printf(director_connect_parms, "SwigDirector%s%s delegate%s", classname, methid, methid);
     }
 
@@ -4262,7 +4256,7 @@ public:
     Delete(director_ctor_code);
     director_ctor_code = NewString("$director_new");
 
-    Java_director_declaration(n);
+    directorDeclaration(n);
 
     Printf(f_directors_h, "%s {\n", Getattr(n, "director:decl"));
     Printf(f_directors_h, "\npublic:\n");
@@ -4280,7 +4274,7 @@ public:
 
     return Language::classDirectorInit(n);
   }
-  
+
   int classDeclaration(Node *n) {
     String *old_director_callback_typedefs = director_callback_typedefs;
     String *old_director_callbacks = director_callbacks;
@@ -4292,6 +4286,7 @@ public:
     if (proxy_flag)
       Swig_propagate_interface_methods(n);
     int ret = Language::classDeclaration(n);
+
     // these variables are deleted in emitProxyClassDefAndCPPCasts, hence no Delete here
     director_callback_typedefs = old_director_callback_typedefs;
     director_callbacks = old_director_callbacks;
@@ -4300,6 +4295,7 @@ public:
     director_delegate_instances = old_director_delegate_instances;
     director_method_types = old_director_method_types;
     director_connect_parms = old_director_connect_parms;
+
     return ret;
   }
 
@@ -4405,13 +4401,13 @@ public:
   }
 
   /*----------------------------------------------------------------------
-   * Java_director_declaration()
+   * directorDeclaration()
    *
    * Generate the director class's declaration
    * e.g. "class SwigDirector_myclass : public myclass, public Swig::Director {"
    *--------------------------------------------------------------------*/
  
-  void Java_director_declaration(Node *n) {
+  void directorDeclaration(Node *n) {
 
     String *base = Getattr(n, "classtype");
     String *class_ctor = NewString("Swig::Director()");
@@ -4428,8 +4424,8 @@ public:
     Delete(dirclassname);
   }
 
-  bool nestedClassesSupported() const { 
-    return true; 
+  NestedClassSupport nestedClassesSupport() const {
+    return NCS_Full;
   }
 };				/* class CSHARP */
 
@@ -4448,7 +4444,7 @@ extern "C" Language *swig_csharp(void) {
  * Static member variables
  * ----------------------------------------------------------------------------- */
 
-const char *CSHARP::usage = (char *) "\
+const char *CSHARP::usage = "\
 C# Options (available with -csharp)\n\
      -dllimport <dl> - Override DllImport attribute name to <dl>\n\
      -namespace <nm> - Generate wrappers into C# namespace <nm>\n\

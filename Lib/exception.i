@@ -15,7 +15,7 @@
 #ifdef SWIGPHP
 %{
 #include "zend_exceptions.h"
-#define SWIG_exception(code, msg) { zend_throw_exception(NULL, (char*)msg, code TSRMLS_CC); }
+#define SWIG_exception(code, msg) zend_throw_exception(NULL, (char*)msg, code TSRMLS_CC)
 %}
 #endif
 
@@ -24,7 +24,7 @@
   SWIGINTERN void SWIG_exception_ (int code, const char *msg,
                                const char *subr) {
 #define ERROR(scmerr)					\
-	scm_error(gh_symbol2scm((char *) (scmerr)),	\
+	scm_error(scm_from_locale_string((char *) (scmerr)),	\
 		  (char *) subr, (char *) msg,		\
 		  SCM_EOL, SCM_BOOL_F)
 #define MAP(swigerr, scmerr)			\
