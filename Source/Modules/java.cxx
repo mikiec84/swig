@@ -2255,6 +2255,7 @@ public:
       }
 
       // Each outer proxy class goes into a separate file
+      String *output_directory = outputDirectory(nspace);
       if (!has_outerclass) {
 	String *filen = NewStringf("%s%s.java", output_directory, proxy_class_name);
 	f_proxy = NewFile(filen, "w", SWIG_output_files());

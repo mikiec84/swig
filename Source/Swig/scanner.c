@@ -545,8 +545,6 @@ static int look(Scanner *s) {
 	state = 4;		/* Possibly a SWIG directive */
       
       /* Look for possible identifiers or unicode/delimiter strings */
-      else if (c == 'L') /* Probably identifier but may be a wide string literal */
-	state = 72;
       else if ((isalpha(c)) || (c == '_') ||
 	       (s->idstart && strchr(s->idstart, c))) {
 	state = 7;
