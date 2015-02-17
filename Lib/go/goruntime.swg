@@ -4,6 +4,12 @@
  * Go runtime code for the various generated files.
  * ------------------------------------------------------------ */
 
+%inline %{
+static void Swig_free(void* p) {
+  free(p);
+}
+%}
+
 %insert(runtime) %{
 #include <stddef.h>
 #include <stdio.h>
@@ -57,11 +63,20 @@ swiggo_size_assert(double, 8)
 extern "C" {
 #endif
 extern void crosscall2(void (*fn)(void *, int), void *, int);
+extern char* _cgo_topofstack(void) __attribute__ ((weak));
 extern void _cgo_allocate(void *, int);
 extern void _cgo_panic(void *, int);
 #ifdef __cplusplus
 }
 #endif
+
+static char *_swig_topofstack() {
+  if (_cgo_topofstack) {
+    return _cgo_topofstack();
+  } else {
+    return 0;
+  }
+}
 
 static void *_swig_goallocate(size_t len) {
   struct {
@@ -89,11 +104,11 @@ static void _swig_gopanic(const char *p) {
 #include "runtime.h"
 #include "cgocall.h"
 
-#ifdef _64BIT
-#define SWIG_PARM_SIZE 8
-#else
-#define SWIG_PARM_SIZE 4
-#endif
+#pragma dataflag 16
+static void *cgocall = runtime·cgocall;
+#pragma dataflag 16
+void *·_cgo_runtime_cgocall = &cgocall;
+
 %}
 
 #else
@@ -194,6 +209,10 @@ static _gostring_ _swig_makegostring(const char *p, size_t l) {
 
 %go_import("unsafe", _ "runtime/cgo")
 
+%insert(go_header) %{
+var _cgo_runtime_cgocall func(unsafe.Pointer, uintptr)
+%}
+
 #else
 
 %go_import("syscall", "unsafe")
@@ -212,10 +231,89 @@ type _ unsafe.Pointer
 
 %}
 
+/* Swig_always_false is used to conditionally assign parameters to
+   Swig_escape_val so that the compiler thinks that they escape.  We
+   only assign them if Swig_always_false is true, which it never is.
+   We export the variable so that the compiler doesn't realize that it
+   is never set. */
+%insert(go_header) %{
+var Swig_escape_always_false bool
+var Swig_escape_val interface{}
+%}
+
 /* Function pointers are translated by the code in go.cxx into
    _swig_fnptr.  Member pointers are translated to _swig_memberptr.  */
 
 %insert(go_header) %{
 type _swig_fnptr *byte
 type _swig_memberptr *byte
+%}
+
+/* Handle memory management for directors.  */
+
+%insert(director) %{
+#include <map>
+
+namespace {
+  struct GCItem {
+    virtual ~GCItem() {}
+  };
+
+  struct GCItem_var {
+    GCItem_var(GCItem *item = 0) : _item(item) {
+    }
+
+    GCItem_var& operator=(GCItem *item) {
+      GCItem *tmp = _item;
+      _item = item;
+      delete tmp;
+      return *this;
+    }
+
+    ~GCItem_var() {
+      delete _item;
+    }
+
+    GCItem* operator->() {
+      return _item;
+    }
+
+    private:
+      GCItem *_item;
+  };
+
+  template <typename Type>
+  struct GCItem_T : GCItem {
+    GCItem_T(Type *ptr) : _ptr(ptr) {
+    }
+
+    virtual ~GCItem_T() {
+      delete _ptr;
+    }
+
+  private:
+    Type *_ptr;
+  };
+}
+
+class Swig_memory {
+public:
+  template <typename Type>
+  void swig_acquire_pointer(Type* vptr) {
+    if (vptr) {
+      swig_owner[vptr] = new GCItem_T<Type>(vptr);
+    }
+  }
+private:
+  typedef std::map<void *, GCItem_var> swig_ownership_map;
+  swig_ownership_map swig_owner;
+};
+
+template <typename Type>
+static void swig_acquire_pointer(Swig_memory** pmem, Type* ptr) {
+  if (!pmem) {
+    *pmem = new Swig_memory;
+  }
+  (*pmem)->swig_acquire_pointer(ptr);
+}
 %}

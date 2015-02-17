@@ -17,5 +17,4 @@ commentVerifier.check(doxygen_ignore.func.__doc__,
 
     Command ignored, but anything here is still included.
 
-
     """)

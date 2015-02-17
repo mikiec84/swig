@@ -354,7 +354,7 @@ static JSStaticFunction $jsmangledname_functions[] = {
   $jsmangledname_objectDefinition.staticValues = $jsmangledname_values;
   $jsmangledname_objectDefinition.staticFunctions = $jsmangledname_functions;
   $jsclass_inheritance
-  JSClassRef $jsmangledname_classRef = JSClassCreate(&$jsmangledname_objectDefinition);
+  $jsmangledname_classRef = JSClassCreate(&$jsmangledname_objectDefinition);
   SWIGTYPE_$jsmangledtype->clientdata = $jsmangledname_classRef;
 %}
 
@@ -402,6 +402,7 @@ static JSStaticFunction $jsnspace_functions[] = {
 };
 
 static JSClassDefinition $jsnspace_classDefinition;
+static JSObjectRef $jsmangledname_object;
 %}
 
 /* -----------------------------------------------------------------------------
@@ -412,7 +413,7 @@ static JSClassDefinition $jsnspace_classDefinition;
 %{
   $jsmangledname_classDefinition.staticFunctions = $jsmangledname_functions;
   $jsmangledname_classDefinition.staticValues = $jsmangledname_values;
-  JSObjectRef $jsmangledname_object = JSObjectMake(context, JSClassCreate(&$jsmangledname_classDefinition), NULL);
+  $jsmangledname_object = JSObjectMake(context, JSClassCreate(&$jsmangledname_classDefinition), NULL);
 %}
 
 /* -----------------------------------------------------------------------------
