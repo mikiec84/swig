@@ -1971,6 +1971,10 @@ public:
       Append(interface_list, ", ");
     Append(interface_list, pure_interfaces);
     
+    // Start writing the proxy class
+    if (!has_outerclass) // Import statements
+      Printv(proxy_class_def, typemapLookup(n, "javaimports", typemap_lookup_type, WARN_NONE),"\n", NIL);
+
     //translate and write javadoc comment if flagged
     if (doxygen && doxygenTranslator->hasDocumentation(n)){
       String *doxygen_comments=doxygenTranslator->getDocumentation(n);
@@ -1979,12 +1983,10 @@ public:
       Printv(proxy_class_def, Char(doxygen_comments), NIL);
       Delete(doxygen_comments);
     }
-    
-    // Start writing the proxy class
-    if (!has_outerclass) // Import statements
-      Printv(proxy_class_def, typemapLookup(n, "javaimports", typemap_lookup_type, WARN_NONE),"\n", NIL);
-    else
+
+    if (has_outerclass)
       Printv(proxy_class_def, "static ", NIL); // C++ nested classes correspond to static java classes
+    
     Printv(proxy_class_def, typemapLookup(n, "javaclassmodifiers", typemap_lookup_type, WARN_JAVA_TYPEMAP_CLASSMOD_UNDEF),	// Class modifiers
 	   " $javaclassname",	// Class name and bases
 	   (*Char(wanted_base)) ? " extends " : "", wanted_base, *Char(interface_list) ?	// Pure Java interfaces
