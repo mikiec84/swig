@@ -1360,15 +1360,6 @@ public:
       if (!addSymbol(symname, n, scope))
 	return SWIG_ERROR;
 
-      //translate and write comment if flagged
-      if (doxygen && doxygenTranslator->hasDocumentation(n)){
-	String *doxygen_comments=doxygenTranslator->getDocumentation(n);
-	if(comment_creation_chatter)
-	  Printf(enum_code, "/* This was generated from enumvalueDeclaration() */");
-	Printv(enum_code, " /** ", Char(doxygen_comments), " */ ", NIL);
-	Delete(doxygen_comments);
-      }
-
       const String *csattributes = Getattr(n, "feature:cs:attributes");
 
       if ((enum_feature == ProperEnum) && parent_name && !unnamedinstance) {
@@ -1376,6 +1367,15 @@ public:
 	// Emit the enum item.
 	if (!GetFlag(n, "firstenumitem"))
 	  Printf(enum_code, ",\n");
+
+	//translate and write comment if flagged
+	if (doxygen && doxygenTranslator->hasDocumentation(n)){
+	  String *doxygen_comments=doxygenTranslator->getDocumentation(n);
+	  if(comment_creation_chatter)
+	    Printf(enum_code, "/* This was generated from enumvalueDeclaration() */");
+	  Printv(enum_code, "\n /** ", Char(doxygen_comments), " */\n", NIL);
+	  Delete(doxygen_comments);
+	}
 
 	if (csattributes)
 	  Printf(enum_code, "  %s\n", csattributes);
@@ -1391,6 +1391,15 @@ public:
 	  Printf(enum_code, " = %s", value);
 	}
       } else {
+	//translate and write comment if flagged
+	if (doxygen && doxygenTranslator->hasDocumentation(n)){
+	  String *doxygen_comments=doxygenTranslator->getDocumentation(n);
+	  if(comment_creation_chatter)
+	    Printf(enum_code, "/* This was generated from enumvalueDeclaration() */");
+	  Printv(enum_code, "\n /** ", Char(doxygen_comments), " */\n", NIL);
+	  Delete(doxygen_comments);
+	}
+
 	// Wrap C/C++ enums with constant integers or use the typesafe enum pattern
 	SwigType *typemap_lookup_type = parent_name ? parent_name : NewString("enum ");
 	Setattr(n, "type", typemap_lookup_type);
