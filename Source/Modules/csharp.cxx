@@ -522,7 +522,7 @@ public:
 	String *doxygen_comments = doxygenTranslator->getDocumentation(n);
 	if (comment_creation_chatter)
 	  Printf(f_module, "/* This was generated from top() */");
-	Printv(f_module, " /** ", Char(doxygen_comments), " */\n", NIL);
+	Printv(f_module, " /**", Char(doxygen_comments), " */\n", NIL);
 	Delete(doxygen_comments);
       }
 
@@ -1189,7 +1189,7 @@ public:
 	if (comment_creation_chatter) {
 	  Printf(enum_code, "/* This was generated from enumDeclaration() */");
 	}
-	Printv(enum_code, " /** ", Char(doxygen_comments), " */ ", NIL);
+	Printv(enum_code, "/**", Char(doxygen_comments), " */\n", NIL);
 	Delete(doxygen_comments);
       }
 
@@ -1373,7 +1373,7 @@ public:
 	  String *doxygen_comments=doxygenTranslator->getDocumentation(n);
 	  if(comment_creation_chatter)
 	    Printf(enum_code, "/* This was generated from enumvalueDeclaration() */");
-	  Printv(enum_code, "\n /** ", Char(doxygen_comments), " */\n", NIL);
+	  Printv(enum_code, "\n/**", Char(doxygen_comments), " */\n", NIL);
 	  Delete(doxygen_comments);
 	}
 
@@ -1396,7 +1396,7 @@ public:
 	  String *doxygen_comments=doxygenTranslator->getDocumentation(n);
 	  if(comment_creation_chatter)
 	    Printf(enum_code, "/* This was generated from enumvalueDeclaration() */");
-	  Printv(enum_code, "\n /** ", Char(doxygen_comments), " */\n", NIL);
+	  Printv(enum_code, "\n/**", Char(doxygen_comments), " */\n", NIL);
 	  Delete(doxygen_comments);
 	}
 
@@ -1463,7 +1463,7 @@ public:
       String *doxygen_comments = doxygenTranslator->getDocumentation(n);
       if (comment_creation_chatter)
 	Printf(structuralComments, "/* This was generated from doxygenComment() */");
-      Printv(structuralComments, " /** ", Char(doxygen_comments), " */ ", NIL);
+      Printv(structuralComments, "/**", Char(doxygen_comments), " */\n", NIL);
       Delete(doxygen_comments);
     }
     return SWIG_OK;
@@ -1495,7 +1495,7 @@ public:
       String *doxygen_comments = doxygenTranslator->getDocumentation(n);
       if (comment_creation_chatter)
 	Printf(constants_code, "/* This was generated from constantWrapper() */");
-      Printv(constants_code, " /** ", Char(doxygen_comments), " */ ", NIL);
+      Printv(constants_code, " /**", Char(doxygen_comments), " */ ", NIL);
       Delete(doxygen_comments);
     }
 
@@ -1832,7 +1832,7 @@ public:
       String *doxygen_comments = doxygenTranslator->getDocumentation(n);
       if (comment_creation_chatter)
 	Printf(proxy_class_def, "/* This was generated from emitProxyClassDefAndCPPCasts() */");
-      Printv(proxy_class_def, " /** ", Char(doxygen_comments), " */ \n", NIL);
+      Printv(proxy_class_def, " /**", Char(doxygen_comments), " */ \n", NIL);
       Delete(doxygen_comments);
     }
     // Class attributes
@@ -2413,7 +2413,7 @@ public:
       String *doxygen_comments = doxygenTranslator->getDocumentation(n);
       if (comment_creation_chatter)
 	Printf(function_code, "/* This was generated from proxyclassfunctionhandler() */");
-      Printv(function_code, " /** ", Char(doxygen_comments), " */ \n", NIL);
+      Printv(function_code, " /**", Char(doxygen_comments), " */ \n", NIL);
       Delete(doxygen_comments);
     }
 
@@ -2755,7 +2755,7 @@ public:
 	String *doxygen_comments = doxygenTranslator->getDocumentation(n);
 	if (comment_creation_chatter)
 	  Printf(function_code, "/* This was generated from constructionhandler() */");
-	Printv(function_code, " /** ", Char(doxygen_comments), " */ \n", NIL);
+	Printv(function_code, " /**", Char(doxygen_comments), " */ \n", NIL);
 	Delete(doxygen_comments);
       }
 
@@ -3062,7 +3062,7 @@ public:
       String *doxygen_comments = doxygenTranslator->getDocumentation(n);
       if (comment_creation_chatter)
 	Printf(function_code, "/* This was generated from moduleClassFunctionHandler() */");
-      Printv(function_code, " /** ", doxygen_comments, " */\n", NIL);
+      Printv(function_code, " /**", doxygen_comments, " */\n", NIL);
       Delete(doxygen_comments);
     }
 
