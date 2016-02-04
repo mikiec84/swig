@@ -236,13 +236,17 @@
 
 /* please leave 720-739 free for Scilab */
 
-#define WARN_DOXYGEN_UNKNOWN_COMMAND          740
-#define WARN_DOXYGEN_UNEXPECTED_END_OF_COMMENT   741
-#define WARN_DOXYGEN_COMMAND_EXPECTED         742
-#define WARN_DOXYGEN_UNTERMINATED_STRING      743
-#define WARN_DOXYGEN_COMMAND_ERROR            744
+#define WARN_PYTHON_INDENT_MISMATCH           740
 
-/* please leave 740-749 free for Doxygen */
+/* please leave 740-759 free for Python */
+
+#define WARN_DOXYGEN_UNKNOWN_COMMAND          770
+#define WARN_DOXYGEN_UNEXPECTED_END_OF_COMMENT   771
+#define WARN_DOXYGEN_COMMAND_EXPECTED         772
+#define WARN_DOXYGEN_UNTERMINATED_STRING      773
+#define WARN_DOXYGEN_COMMAND_ERROR            774
+
+/* please leave 770-779 free for Doxygen */
 
 #define WARN_RUBY_WRONG_NAME                  801
 #define WARN_RUBY_MULTIPLE_INHERITANCE        802

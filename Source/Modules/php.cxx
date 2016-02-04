@@ -190,7 +190,7 @@ class PHP : public Language {
 	p = strchr(p, '"');
 	if (p) {
 	  ++p;
-	  Insert(action, p - Char(action), " TSRMLS_CC");
+	  Insert(action, (int)(p - Char(action)), " TSRMLS_CC");
 	}
       }
     }
@@ -320,9 +320,7 @@ public:
 
     Swig_banner(f_begin);
 
-    Printf(f_runtime, "\n");
-    Printf(f_runtime, "#define SWIGPHP\n");
-    Printf(f_runtime, "\n");
+    Printf(f_runtime, "\n\n#ifndef SWIGPHP\n#define SWIGPHP\n#endif\n\n");
 
     if (directorsEnabled()) {
       Printf(f_runtime, "#define SWIG_DIRECTORS\n");
@@ -473,6 +471,7 @@ public:
 
     if (directorsEnabled()) {
       // Insert director runtime
+      Swig_insert_file("director_common.swg", s_header);
       Swig_insert_file("director.swg", s_header);
     }
 
@@ -638,7 +637,7 @@ public:
     Printv(f_begin, all_cs_entry, "\n\n", s_arginfo, "\n\n", s_entry,
 	" SWIG_ZEND_NAMED_FE(swig_", module, "_alter_newobject,_wrap_swig_", module, "_alter_newobject,NULL)\n"
 	" SWIG_ZEND_NAMED_FE(swig_", module, "_get_newobject,_wrap_swig_", module, "_get_newobject,NULL)\n"
-	"{NULL, NULL, NULL}\n};\n\n", NIL);
+	" ZEND_FE_END\n};\n\n", NIL);
     Printv(f_begin, s_init, NIL);
     Delete(s_header);
     Delete(s_wrappers);
@@ -1721,7 +1720,7 @@ public:
 	      Printf(output, "\t\t\treturn new %s%s($r);\n", prefix, Getattr(classLookup(d), "sym:name"));
 	    } else {
 	      Printf(output, "\t\t\t$c = new stdClass();\n");
-	      Printf(output, "\t\t\t$c->"SWIG_PTR" = $r;\n");
+	      Printf(output, "\t\t\t$c->" SWIG_PTR " = $r;\n");
 	      Printf(output, "\t\t\treturn $c;\n");
 	    }
 	    Printf(output, "\t\t}\n\t\treturn $r;\n");
@@ -2423,7 +2422,7 @@ done:
 	String *target = Swig_method_decl(0, decl, classname, parms, 0, 0);
 	const char * p = Char(target);
 	const char * comma = strchr(p, ',');
-	size_t ins = comma ? comma - p : Len(target) - 1;
+	int ins = comma ? (int)(comma - p) : Len(target) - 1;
 	Insert(target, ins, " TSRMLS_DC");
 
 	call = Swig_csuperclass_call(0, basetype, superparms);
@@ -2442,7 +2441,7 @@ done:
 	String *target = Swig_method_decl(0, decl, classname, parms, 0, 1);
 	const char * p = Char(target);
 	const char * comma = strchr(p, ',');
-	size_t ins = comma ? comma - p : Len(target) - 1;
+	int ins = comma ? (int)(comma - p) : Len(target) - 1;
 	Insert(target, ins, " TSRMLS_DC");
 
 	Printf(f_directors_h, "    %s;\n", target);
