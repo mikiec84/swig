@@ -1,15 +1,15 @@
 /* -----------------------------------------------------------------------------
- * This file is part of SWIG, which is licensed as a whole under version 3 
- * (or any later version) of the GNU General Public License. Some additional
- * terms also apply to certain portions of SWIG. The full details of the SWIG
- * license and copyrights can be found in the LICENSE and COPYRIGHT files
- * included with the SWIG source code as distributed by the SWIG developers
- * and at http://www.swig.org/legal.html.
- *
- * csharp.cxx
- *
- * C# language module for SWIG.
- * ----------------------------------------------------------------------------- */
+* This file is part of SWIG, which is licensed as a whole under version 3 
+* (or any later version) of the GNU General Public License. Some additional
+* terms also apply to certain portions of SWIG. The full details of the SWIG
+* license and copyrights can be found in the LICENSE and COPYRIGHT files
+* included with the SWIG source code as distributed by the SWIG developers
+* and at http://www.swig.org/legal.html.
+*
+* csharp.cxx
+*
+* C# language module for SWIG.
+* ----------------------------------------------------------------------------- */
 
 #include "swigmod.h"
 #include <limits.h>		// for INT_MAX
@@ -102,129 +102,129 @@ class CSHARP:public Language {
 public:
 
   /* -----------------------------------------------------------------------------
-   * CSHARP()
-   * ----------------------------------------------------------------------------- */
+  * CSHARP()
+  * ----------------------------------------------------------------------------- */
 
-   CSHARP():empty_string(NewString("")),
-      public_string(NewString("public")),
-      protected_string(NewString("protected")),
-      swig_types_hash(NULL),
-      f_begin(NULL),
-      f_runtime(NULL),
-      f_runtime_h(NULL),
-      f_header(NULL),
-      f_wrappers(NULL),
-      f_init(NULL),
-      f_directors(NULL),
-      f_directors_h(NULL),
-      f_single_out(NULL),
-      filenames_list(NULL),
-      proxy_flag(true),
-      native_function_flag(false),
-      enum_constant_flag(false),
-      static_flag(false),
-      variable_wrapper_flag(false),
-      wrapping_member_flag(false),
-      global_variable_flag(false),
-      old_variable_names(false),
-      generate_property_declaration_flag(false),
-      doxygen(false),
-      comment_creation_chatter(false),
-      imclass_name(NULL),
-      module_class_name(NULL),
-      imclass_class_code(NULL),
-      interface_class_code(NULL),
-      proxy_class_def(NULL),
-      proxy_class_code(NULL),
-      module_class_code(NULL),
-      proxy_class_name(NULL),
-      full_imclass_name(NULL),
-      variable_name(NULL),
-      proxy_class_constants_code(NULL),
-      module_class_constants_code(NULL),
-      enum_code(NULL),
-      dllimport(NULL),
-      namespce(NULL),
-      imclass_imports(NULL),
-      module_imports(NULL),
-      imclass_baseclass(NULL),
-      module_baseclass(NULL),
-      imclass_interfaces(NULL),
-      module_interfaces(NULL),
-      imclass_class_modifiers(NULL),
-      module_class_modifiers(NULL),
-      upcasts_code(NULL),
-      imclass_cppcasts_code(NULL),
-      director_callback_typedefs(NULL),
-      director_callbacks(NULL),
-      director_delegate_callback(NULL),
-      director_delegate_definitions(NULL),
-      director_delegate_instances(NULL),
-      director_method_types(NULL),
-      director_connect_parms(NULL),
-      destructor_call(NULL),
-      output_file(NULL),
-      structuralComments(NULL),
-      dmethods_seq(NULL),
-      dmethods_table(NULL),
-      n_dmethods(0),
-      n_directors(0),
-      first_class_dmethod(0),
-      curr_class_dmethod(0),
-      nesting_depth(0){
-    /* for now, multiple inheritance in directors is disabled, this
-       should be easy to implement though */
-    director_multiple_inheritance = 0;
-    director_language = 1;
+  CSHARP():empty_string(NewString("")),
+    public_string(NewString("public")),
+    protected_string(NewString("protected")),
+    swig_types_hash(NULL),
+    f_begin(NULL),
+    f_runtime(NULL),
+    f_runtime_h(NULL),
+    f_header(NULL),
+    f_wrappers(NULL),
+    f_init(NULL),
+    f_directors(NULL),
+    f_directors_h(NULL),
+    f_single_out(NULL),
+    filenames_list(NULL),
+    proxy_flag(true),
+    native_function_flag(false),
+    enum_constant_flag(false),
+    static_flag(false),
+    variable_wrapper_flag(false),
+    wrapping_member_flag(false),
+    global_variable_flag(false),
+    old_variable_names(false),
+    generate_property_declaration_flag(false),
+    doxygen(false),
+    comment_creation_chatter(false),
+    imclass_name(NULL),
+    module_class_name(NULL),
+    imclass_class_code(NULL),
+    interface_class_code(NULL),
+    proxy_class_def(NULL),
+    proxy_class_code(NULL),
+    module_class_code(NULL),
+    proxy_class_name(NULL),
+    full_imclass_name(NULL),
+    variable_name(NULL),
+    proxy_class_constants_code(NULL),
+    module_class_constants_code(NULL),
+    enum_code(NULL),
+    dllimport(NULL),
+    namespce(NULL),
+    imclass_imports(NULL),
+    module_imports(NULL),
+    imclass_baseclass(NULL),
+    module_baseclass(NULL),
+    imclass_interfaces(NULL),
+    module_interfaces(NULL),
+    imclass_class_modifiers(NULL),
+    module_class_modifiers(NULL),
+    upcasts_code(NULL),
+    imclass_cppcasts_code(NULL),
+    director_callback_typedefs(NULL),
+    director_callbacks(NULL),
+    director_delegate_callback(NULL),
+    director_delegate_definitions(NULL),
+    director_delegate_instances(NULL),
+    director_method_types(NULL),
+    director_connect_parms(NULL),
+    destructor_call(NULL),
+    output_file(NULL),
+    structuralComments(NULL),
+    dmethods_seq(NULL),
+    dmethods_table(NULL),
+    n_dmethods(0),
+    n_directors(0),
+    first_class_dmethod(0),
+    curr_class_dmethod(0),
+    nesting_depth(0){
+      /* for now, multiple inheritance in directors is disabled, this
+      should be easy to implement though */
+      director_multiple_inheritance = 0;
+      director_language = 1;
   }
-  
-   ~CSHARP() {
-     delete doxygenTranslator;
+
+  ~CSHARP() {
+    delete doxygenTranslator;
   }
 
   /* -----------------------------------------------------------------------------
-   * getProxyName()
-   *
-   * Test to see if a type corresponds to something wrapped with a proxy class.
-   * Return NULL if not otherwise the proxy class name, fully qualified with
-   * a namespace if the nspace feature is used.
-   * ----------------------------------------------------------------------------- */
-  
-   String *getProxyName(SwigType *t) {
-     String *proxyname = NULL;
-     if (proxy_flag) {
-       Node *n = classLookup(t);
-       if (n) {
-	 proxyname = Getattr(n, "proxyname");
-	 if (!proxyname) {
-	   String *nspace = Getattr(n, "sym:nspace");
-	   String *symname = Copy(Getattr(n, "sym:name"));
-	   if (symname && !GetFlag(n, "feature:flatnested")) {
-	     for (Node *outer_class = Getattr(n, "nested:outer"); outer_class; outer_class = Getattr(outer_class, "nested:outer")) {
-	       Push(symname, ".");
-	       Push(symname, Getattr(outer_class, "sym:name"));
-	     }
-	   }
-	   if (nspace) {
-	     if (namespce)
-	       proxyname = NewStringf("%s.%s.%s", namespce, nspace, symname);
-	     else
-	       proxyname = NewStringf("%s.%s", nspace, symname);
-	   } else {
-	     proxyname = Copy(symname);
-	   }
-	   Setattr(n, "proxyname", proxyname);
-	   Delete(proxyname);
-	   Delete(symname);
-	 }
-       }
-     }
-     return proxyname;
-   }
+  * getProxyName()
+  *
+  * Test to see if a type corresponds to something wrapped with a proxy class.
+  * Return NULL if not otherwise the proxy class name, fully qualified with
+  * a namespace if the nspace feature is used.
+  * ----------------------------------------------------------------------------- */
+
+  String *getProxyName(SwigType *t) {
+    String *proxyname = NULL;
+    if (proxy_flag) {
+      Node *n = classLookup(t);
+      if (n) {
+	proxyname = Getattr(n, "proxyname");
+	if (!proxyname) {
+	  String *nspace = Getattr(n, "sym:nspace");
+	  String *symname = Copy(Getattr(n, "sym:name"));
+	  if (symname && !GetFlag(n, "feature:flatnested")) {
+	    for (Node *outer_class = Getattr(n, "nested:outer"); outer_class; outer_class = Getattr(outer_class, "nested:outer")) {
+	      Push(symname, ".");
+	      Push(symname, Getattr(outer_class, "sym:name"));
+	    }
+	  }
+	  if (nspace) {
+	    if (namespce)
+	      proxyname = NewStringf("%s.%s.%s", namespce, nspace, symname);
+	    else
+	      proxyname = NewStringf("%s.%s", nspace, symname);
+	  } else {
+	    proxyname = Copy(symname);
+	  }
+	  Setattr(n, "proxyname", proxyname);
+	  Delete(proxyname);
+	  Delete(symname);
+	}
+      }
+    }
+    return proxyname;
+  }
 
   /* ------------------------------------------------------------
-   * main()
-   * ------------------------------------------------------------ */
+  * main()
+  * ------------------------------------------------------------ */
 
   virtual void main(int argc, char *argv[]) {
 
@@ -305,8 +305,8 @@ public:
   }
 
   /* ---------------------------------------------------------------------
-   * top()
-   * --------------------------------------------------------------------- */
+  * top()
+  * --------------------------------------------------------------------- */
 
   virtual int top(Node *n) {
 
@@ -317,13 +317,13 @@ public:
       if (Getattr(optionsnode, "imclassname"))
 	imclass_name = Copy(Getattr(optionsnode, "imclassname"));
       /* check if directors are enabled for this module.  note: this 
-       * is a "master" switch, without which no director code will be
-       * emitted.  %feature("director") statements are also required
-       * to enable directors for individual classes or methods.
-       *
-       * use %module(directors="1") modulename at the start of the 
-       * interface file to enable director generation.
-       */
+      * is a "master" switch, without which no director code will be
+      * emitted.  %feature("director") statements are also required
+      * to enable directors for individual classes or methods.
+      *
+      * use %module(directors="1") modulename at the start of the 
+      * interface file to enable director generation.
+      */
       if (Getattr(optionsnode, "directors")) {
 	allow_directors();
       }
@@ -350,8 +350,8 @@ public:
 
     if (directorsEnabled()) {
       if (!outfile_h) {
-        Printf(stderr, "Unable to determine outfile_h\n");
-        SWIG_exit(EXIT_FAILURE);
+	Printf(stderr, "Unable to determine outfile_h\n");
+	SWIG_exit(EXIT_FAILURE);
       }
       f_runtime_h = NewFile(outfile_h, "w", SWIG_output_files());
       if (!f_runtime_h) {
@@ -579,8 +579,8 @@ public:
 	if (it1.item && it2.item) {
 	  if (Strcmp(item1_lower, item2_lower) == 0) {
 	    Swig_warning(WARN_LANG_PORTABILITY_FILENAME, input_file, line_number,
-			 "Portability warning: File %s will be overwritten by %s on case insensitive filesystems such as "
-			 "Windows' FAT32 and NTFS unless the class/module name is renamed\n", it1.item, it2.item);
+	      "Portability warning: File %s will be overwritten by %s on case insensitive filesystems such as "
+	      "Windows' FAT32 and NTFS unless the class/module name is renamed\n", it1.item, it2.item);
 	  }
 	}
 	Delete(item2_lower);
@@ -672,8 +672,8 @@ public:
   }
 
   /* -----------------------------------------------------------------------------
-   * emitBanner()
-   * ----------------------------------------------------------------------------- */
+  * emitBanner()
+  * ----------------------------------------------------------------------------- */
 
   void emitBanner(File *f) {
     Printf(f, "//------------------------------------------------------------------------------\n");
@@ -684,16 +684,16 @@ public:
   }
 
   /* -----------------------------------------------------------------------------
-   * getOutputFile()
-   *
-   * Prepares a File object by creating the file in the file system and
-   * writing the banner for auto-generated files to it (emitBanner).
-   * If '-outfile' is provided (single file mode) the supplied parameters will
-   * be ignored and the returned file will always be:
-   *  <outdir>/<outfile>
-   * Otherwise the file will be:
-   *  <dir>/<name>.cs
-   * ----------------------------------------------------------------------------- */
+  * getOutputFile()
+  *
+  * Prepares a File object by creating the file in the file system and
+  * writing the banner for auto-generated files to it (emitBanner).
+  * If '-outfile' is provided (single file mode) the supplied parameters will
+  * be ignored and the returned file will always be:
+  *  <outdir>/<outfile>
+  * Otherwise the file will be:
+  *  <dir>/<name>.cs
+  * ----------------------------------------------------------------------------- */
 
   File *getOutputFile(const String *dir, const String *name) {
     if (output_file) {
@@ -728,8 +728,8 @@ public:
   }
 
   /*-----------------------------------------------------------------------
-   * Add new director upcall signature
-   *----------------------------------------------------------------------*/
+  * Add new director upcall signature
+  *----------------------------------------------------------------------*/
 
   UpcallData *addUpcallMethod(String *imclass_method, String *class_method, String *decl, String *overloaded_name) {
     String *key = NewStringf("%s|%s", imclass_method, decl);
@@ -753,22 +753,22 @@ public:
   }
 
   /*-----------------------------------------------------------------------
-   * Get director upcall signature
-   *----------------------------------------------------------------------*/
+  * Get director upcall signature
+  *----------------------------------------------------------------------*/
 
   /*
-     UpcallData * getUpcallMethodData(String *director_class, String *decl) {
-     String             *key = NewStringf("%s|%s", director_class, decl);
-     UpcallData         *udata = Getattr(dmethods_table, key);
+  UpcallData * getUpcallMethodData(String *director_class, String *decl) {
+  String             *key = NewStringf("%s|%s", director_class, decl);
+  UpcallData         *udata = Getattr(dmethods_table, key);
 
-     Delete(key);
-     return udata;
-     }
-   */
+  Delete(key);
+  return udata;
+  }
+  */
 
   /* ----------------------------------------------------------------------
-   * nativeWrapper()
-   * ---------------------------------------------------------------------- */
+  * nativeWrapper()
+  * ---------------------------------------------------------------------- */
 
   virtual int nativeWrapper(Node *n) {
     String *wrapname = Getattr(n, "wrap:name");
@@ -791,8 +791,8 @@ public:
   }
 
   /* ----------------------------------------------------------------------
-   * functionWrapper()
-   * ---------------------------------------------------------------------- */
+  * functionWrapper()
+  * ---------------------------------------------------------------------- */
 
   virtual int functionWrapper(Node *n) {
     String *symname = Getattr(n, "sym:name");
@@ -817,10 +817,10 @@ public:
     }
 
     /*
-       The rest of this function deals with generating the intermediary class wrapper function (that wraps
-       a c/c++ function) and generating the PInvoke c code. Each C# wrapper function has a 
-       matching PInvoke c function call.
-     */
+    The rest of this function deals with generating the intermediary class wrapper function (that wraps
+    a c/c++ function) and generating the PInvoke c code. Each C# wrapper function has a 
+    matching PInvoke c function call.
+    */
 
     // A new wrapper function object
     Wrapper *f = NewWrapper();
@@ -1018,10 +1018,10 @@ public:
 	Replaceall(tm, "$target", "jresult");	/* deprecated */
 	Replaceall(tm, "$result", "jresult");
 
-        if (GetFlag(n, "feature:new"))
-          Replaceall(tm, "$owner", "1");
-        else
-          Replaceall(tm, "$owner", "0");
+	if (GetFlag(n, "feature:new"))
+	  Replaceall(tm, "$owner", "1");
+	else
+	  Replaceall(tm, "$owner", "0");
 
 	Printf(f->code, "%s", tm);
 	null_attribute = Getattr(n, "tmap:out:null");
@@ -1098,10 +1098,10 @@ public:
       if (!Getattr(n, "csharp:canthrow")) {
 	if (Strstr(f->code, "SWIG_exception")) {
 	  Swig_warning(WARN_CSHARP_CANTHROW, input_file, line_number,
-		       "Unmanaged code contains a call to SWIG_exception and C# code does not handle pending exceptions via the canthrow attribute.\n");
+	    "Unmanaged code contains a call to SWIG_exception and C# code does not handle pending exceptions via the canthrow attribute.\n");
 	} else if (Strstr(f->code, "SWIG_CSharpSetPendingException")) {
 	  Swig_warning(WARN_CSHARP_CANTHROW, input_file, line_number,
-		       "Unmanaged code contains a call to a SWIG_CSharpSetPendingException method and C# code does not handle pending exceptions via the canthrow attribute.\n");
+	    "Unmanaged code contains a call to a SWIG_CSharpSetPendingException method and C# code does not handle pending exceptions via the canthrow attribute.\n");
 	}
       }
     }
@@ -1111,9 +1111,9 @@ public:
     }
 
     /* 
-     * Generate the proxy class properties for public member variables.
-     * Not for enums and constants.
-     */
+    * Generate the proxy class properties for public member variables.
+    * Not for enums and constants.
+    */
     if (proxy_flag && wrapping_member_flag && !enum_constant_flag) {
       // Capitalize the first letter in the variable in the getter/setter function name
       bool getter_flag = Cmp(symname, Swig_name_set(getNSpace(), Swig_name_member(0, getClassPrefix(), variable_name))) != 0;
@@ -1144,8 +1144,8 @@ public:
   }
 
   /* -----------------------------------------------------------------------
-   * variableWrapper()
-   * ----------------------------------------------------------------------- */
+  * variableWrapper()
+  * ----------------------------------------------------------------------- */
 
   virtual int variableWrapper(Node *n) {
     Language::variableWrapper(n);
@@ -1153,8 +1153,8 @@ public:
   }
 
   /* -----------------------------------------------------------------------
-   * globalvariableHandler()
-   * ------------------------------------------------------------------------ */
+  * globalvariableHandler()
+  * ------------------------------------------------------------------------ */
 
   virtual int globalvariableHandler(Node *n) {
 
@@ -1171,7 +1171,7 @@ public:
 
     return ret;
   }
-  
+
   String *getCurrentScopeName(String *nspace) {
     String *scope = 0;
     if (nspace || getCurrentClass()) {
@@ -1195,15 +1195,15 @@ public:
   }
 
   /* ----------------------------------------------------------------------
-   * enumDeclaration()
-   *
-   * C/C++ enums can be mapped in one of 4 ways, depending on the cs:enum feature specified:
-   * 1) Simple enums - simple constant within the proxy class or module class
-   * 2) Typeunsafe enums - simple constant in a C# class (class named after the c++ enum name)
-   * 3) Typesafe enum - typesafe enum pattern (class named after the c++ enum name)
-   * 4) Proper enums - proper C# enum
-   * Anonymous enums always default to 1)
-   * ---------------------------------------------------------------------- */
+  * enumDeclaration()
+  *
+  * C/C++ enums can be mapped in one of 4 ways, depending on the cs:enum feature specified:
+  * 1) Simple enums - simple constant within the proxy class or module class
+  * 2) Typeunsafe enums - simple constant in a C# class (class named after the c++ enum name)
+  * 3) Typesafe enum - typesafe enum pattern (class named after the c++ enum name)
+  * 4) Proper enums - proper C# enum
+  * Anonymous enums always default to 1)
+  * ---------------------------------------------------------------------- */
 
   virtual int enumDeclaration(Node *n) {
 
@@ -1260,8 +1260,8 @@ public:
 
 	// Emit the enum
 	Printv(enum_code, typemapLookup(n, "csclassmodifiers", typemap_lookup_type, WARN_CSHARP_TYPEMAP_CLASSMOD_UNDEF),	// Class modifiers (enum modifiers really)
-	       " ", symname, (*Char(pure_baseclass) || *Char(pure_interfaces)) ? " : " : "", pure_baseclass, ((*Char(pure_baseclass)) && *Char(pure_interfaces)) ?	// Interfaces
-	       ", " : "", pure_interfaces, " {\n", NIL);
+	  " ", symname, (*Char(pure_baseclass) || *Char(pure_interfaces)) ? " : " : "", pure_baseclass, ((*Char(pure_baseclass)) && *Char(pure_interfaces)) ?	// Interfaces
+	  ", " : "", pure_interfaces, " {\n", NIL);
 	Delete(scope);
       } else {
 	// Wrap C++ enum with integers - just indicate start of enum with a comment, no comment for anonymous enums of any sort
@@ -1277,8 +1277,8 @@ public:
 	// Finish the enum declaration
 	// Typemaps are used to generate the enum definition in a similar manner to proxy classes.
 	Printv(enum_code, (enum_feature == ProperEnum) ? "\n" : typemapLookup(n, "csbody", typemap_lookup_type, WARN_CSHARP_TYPEMAP_CSBODY_UNDEF),	// main body of class
-	       typemapLookup(n, "cscode", typemap_lookup_type, WARN_NONE),	// extra C# code
-	       "}", NIL);
+	  typemapLookup(n, "cscode", typemap_lookup_type, WARN_NONE),	// extra C# code
+	  "}", NIL);
 
 	Replaceall(enum_code, "$csclassname", symname);
 
@@ -1304,7 +1304,7 @@ public:
 	  addOpenNamespace(nspace, f_enum);
 
 	  Printv(f_enum, typemapLookup(n, "csimports", typemap_lookup_type, WARN_NONE), // Import statements
-		 "\n", enum_code, "\n", NIL);
+	    "\n", enum_code, "\n", NIL);
 
 	  addCloseNamespace(nspace, f_enum);
 	  if (f_enum != f_single_out)
@@ -1333,8 +1333,8 @@ public:
   }
 
   /* ----------------------------------------------------------------------
-   * enumvalueDeclaration()
-   * ---------------------------------------------------------------------- */
+  * enumvalueDeclaration()
+  * ---------------------------------------------------------------------- */
 
   virtual int enumvalueDeclaration(Node *n) {
     if (getCurrentClass() && (cplus_mode != PUBLIC))
@@ -1447,8 +1447,8 @@ public:
 
 	String *return_type = Copy(tm);
 	substituteClassname(typemap_lookup_type, return_type);
-        const String *methodmods = Getattr(n, "feature:cs:methodmodifiers");
-        methodmods = methodmods ? methodmods : (is_public(n) ? public_string : protected_string);
+	const String *methodmods = Getattr(n, "feature:cs:methodmodifiers");
+	methodmods = methodmods ? methodmods : (is_public(n) ? public_string : protected_string);
 
 	if (csattributes)
 	  Printf(enum_code, "  %s\n", csattributes);
@@ -1494,10 +1494,10 @@ public:
   }
 
   /* -----------------------------------------------------------------------
-   * doxygenComment()
-   * Simply translates the doxygen comment and places it into the appropriate
-   * file
-   * ------------------------------------------------------------------------ */
+  * doxygenComment()
+  * Simply translates the doxygen comment and places it into the appropriate
+  * file
+  * ------------------------------------------------------------------------ */
   virtual int doxygenComment(Node *n){
     if (doxygen && doxygenTranslator->hasDocumentation(n)){
       String *doxygen_comments = doxygenTranslator->getDocumentation(n);
@@ -1510,15 +1510,15 @@ public:
   }
 
   /* -----------------------------------------------------------------------
-   * constantWrapper()
-   * Used for wrapping constants - #define or %constant.
-   * Also for inline initialised const static primitive type member variables (short, int, double, enums etc).
-   * C# static const variables are generated for these.
-   * If the %csconst(1) feature is used then the C constant value is used to initialise the C# const variable.
-   * If not, a PINVOKE method is generated to get the C constant value for initialisation of the C# const variable.
-   * However, if the %csconstvalue feature is used, it overrides all other ways to generate the initialisation.
-   * Also note that this method might be called for wrapping enum items (when the enum is using %csconst(0)).
-   * ------------------------------------------------------------------------ */
+  * constantWrapper()
+  * Used for wrapping constants - #define or %constant.
+  * Also for inline initialised const static primitive type member variables (short, int, double, enums etc).
+  * C# static const variables are generated for these.
+  * If the %csconst(1) feature is used then the C constant value is used to initialise the C# const variable.
+  * If not, a PINVOKE method is generated to get the C constant value for initialisation of the C# const variable.
+  * However, if the %csconstvalue feature is used, it overrides all other ways to generate the initialisation.
+  * Also note that this method might be called for wrapping enum items (when the enum is using %csconst(0)).
+  * ------------------------------------------------------------------------ */
 
   virtual int constantWrapper(Node *n) {
     String *symname = Getattr(n, "sym:name");
@@ -1562,7 +1562,7 @@ public:
     int const_feature_flag = GetFlag(n, "feature:cs:const");
 
     /* Adjust the enum type for the Swig_typemap_lookup.
-     * We want the same jstype typemap for all the enum items so we use the enum type (parent node). */
+    * We want the same jstype typemap for all the enum items so we use the enum type (parent node). */
     if (is_enum_item) {
       t = Getattr(parentNode(n), "enumtype");
       Setattr(n, "type", t);
@@ -1632,13 +1632,13 @@ public:
       // Alternative constant handling will use the C syntax to make a true C# constant and hope that it compiles as C# code
       if (Getattr(n, "wrappedasconstant")) {
 	if (SwigType_type(t) == T_CHAR || SwigType_type(t) == T_WCHAR)
-          Printf(constants_code, "\'%s\';\n", Getattr(n, "staticmembervariableHandler:value"));
+	  Printf(constants_code, "\'%s\';\n", Getattr(n, "staticmembervariableHandler:value"));
 	else if (SwigType_type(t) == T_STRING || SwigType_type(t) == T_WSTRING)
 	  Printf(constants_code, "\"%s\";\n", Getattr(n, "staticmembervariableHandler:value"));
 	else
-          Printf(constants_code, "%s;\n", Getattr(n, "staticmembervariableHandler:value"));
+	  Printf(constants_code, "%s;\n", Getattr(n, "staticmembervariableHandler:value"));
       } else {
-        Printf(constants_code, "%s;\n", Getattr(n, "value"));
+	Printf(constants_code, "%s;\n", Getattr(n, "value"));
       }
     }
 
@@ -1659,8 +1659,8 @@ public:
   }
 
   /* -----------------------------------------------------------------------------
-   * insertDirective()
-   * ----------------------------------------------------------------------------- */
+  * insertDirective()
+  * ----------------------------------------------------------------------------- */
 
   virtual int insertDirective(Node *n) {
     String *code = Getattr(n, "code");
@@ -1671,22 +1671,22 @@ public:
   }
 
   /* -----------------------------------------------------------------------------
-   * pragmaDirective()
-   *
-   * Valid Pragmas:
-   * imclassbase            - base (extends) for the intermediary class
-   * imclassclassmodifiers  - class modifiers for the intermediary class
-   * imclasscode            - text (C# code) is copied verbatim to the intermediary class
-   * imclassimports         - import statements for the intermediary class
-   * imclassinterfaces      - interface (implements) for the intermediary class
-   *
-   * modulebase              - base (extends) for the module class
-   * moduleclassmodifiers    - class modifiers for the module class
-   * modulecode              - text (C# code) is copied verbatim to the module class
-   * moduleimports           - import statements for the module class
-   * moduleinterfaces        - interface (implements) for the module class
-   *
-   * ----------------------------------------------------------------------------- */
+  * pragmaDirective()
+  *
+  * Valid Pragmas:
+  * imclassbase            - base (extends) for the intermediary class
+  * imclassclassmodifiers  - class modifiers for the intermediary class
+  * imclasscode            - text (C# code) is copied verbatim to the intermediary class
+  * imclassimports         - import statements for the intermediary class
+  * imclassinterfaces      - interface (implements) for the intermediary class
+  *
+  * modulebase              - base (extends) for the module class
+  * moduleclassmodifiers    - class modifiers for the module class
+  * modulecode              - text (C# code) is copied verbatim to the module class
+  * moduleimports           - import statements for the module class
+  * moduleinterfaces        - interface (implements) for the module class
+  *
+  * ----------------------------------------------------------------------------- */
 
   virtual int pragmaDirective(Node *n) {
     if (!ImportMode) {
@@ -1789,8 +1789,8 @@ public:
     Delete(keys);
   }
   /* -----------------------------------------------------------------------------
-   * emitProxyClassDefAndCPPCasts()
-   * ----------------------------------------------------------------------------- */
+  * emitProxyClassDefAndCPPCasts()
+  * ----------------------------------------------------------------------------- */
 
   void emitProxyClassDefAndCPPCasts(Node *n) {
     String *c_classname = SwigType_namestr(Getattr(n, "name"));
@@ -1813,26 +1813,26 @@ public:
     if (!purebase_replace) {
       List *baselist = Getattr(n, "bases");
       if (baselist) {
-        Iterator base = First(baselist);
+	Iterator base = First(baselist);
 	while (base.item && (GetFlag(base.item, "feature:ignore") || Getattr(base.item, "feature:interface")))
 	  base = Next(base);
-        if (base.item) {
-          c_baseclassname = Getattr(base.item, "name");
-          baseclass = Copy(getProxyName(c_baseclassname));
-          if (baseclass)
-            c_baseclass = SwigType_namestr(Getattr(base.item, "name"));
-          base = Next(base);
-          /* Warn about multiple inheritance for additional base class(es) */
-          while (base.item) {
+	if (base.item) {
+	  c_baseclassname = Getattr(base.item, "name");
+	  baseclass = Copy(getProxyName(c_baseclassname));
+	  if (baseclass)
+	    c_baseclass = SwigType_namestr(Getattr(base.item, "name"));
+	  base = Next(base);
+	  /* Warn about multiple inheritance for additional base class(es) */
+	  while (base.item) {
 	    if (!GetFlag(base.item, "feature:ignore") && !Getattr(base.item, "feature:interface")) {
 	      String *proxyclassname = Getattr(n, "classtypeobj");
 	      String *baseclassname = Getattr(base.item, "name");
 	      Swig_warning(WARN_CSHARP_MULTIPLE_INHERITANCE, Getfile(n), Getline(n),
-                "Warning for %s proxy: Base %s ignored. Multiple inheritance is not supported in Java.\n", SwigType_namestr(proxyclassname), SwigType_namestr(baseclassname));
+		"Warning for %s proxy: Base %s ignored. Multiple inheritance is not supported in Java.\n", SwigType_namestr(proxyclassname), SwigType_namestr(baseclassname));
 	    }
-            base = Next(base);
-          }
-        }
+	    base = Next(base);
+	  }
+	}
       }
     }
     if (Hash* interface_classes = Getattr(n, "feature:interface:bases"))
@@ -1849,11 +1849,11 @@ public:
       Delete(baseclass);
       baseclass = NULL;
       if (purebase_notderived)
-        Swig_error(Getfile(n), Getline(n), "The csbase typemap for proxy %s must contain just one of the 'replace' or 'notderived' attributes.\n", typemap_lookup_type);
+	Swig_error(Getfile(n), Getline(n), "The csbase typemap for proxy %s must contain just one of the 'replace' or 'notderived' attributes.\n", typemap_lookup_type);
     } else if (Len(pure_baseclass) > 0 && Len(baseclass) > 0) {
       Swig_warning(WARN_CSHARP_MULTIPLE_INHERITANCE, Getfile(n), Getline(n),
-		   "Warning for %s proxy: Base %s ignored. Multiple inheritance is not supported in C#. "
-		   "Perhaps you need one of the 'replace' or 'notderived' attributes in the csbase typemap?\n", typemap_lookup_type, pure_baseclass);
+	"Warning for %s proxy: Base %s ignored. Multiple inheritance is not supported in C#. "
+	"Perhaps you need one of the 'replace' or 'notderived' attributes in the csbase typemap?\n", typemap_lookup_type, pure_baseclass);
     }
 
     // Pure C# interfaces
@@ -1865,7 +1865,7 @@ public:
     // Start writing the proxy class
     if (!has_outerclass)
       Printv(proxy_class_def, typemapLookup(n, "csimports", typemap_lookup_type, WARN_NONE),	// Import statements
-	   "\n", NIL);
+      "\n", NIL);
 
     // translate and write  comment if flagged
     if (doxygen && doxygenTranslator->hasDocumentation(n)){
@@ -1881,11 +1881,11 @@ public:
       Printf(proxy_class_def, "%s\n", csattributes);
 
     Printv(proxy_class_def, typemapLookup(n, "csclassmodifiers", typemap_lookup_type, WARN_CSHARP_TYPEMAP_CLASSMOD_UNDEF),	// Class modifiers
-	   " $csclassname",	// Class name and base class
-	   (*Char(wanted_base) || *Char(interface_list)) ? " : " : "", wanted_base, (*Char(wanted_base) && *Char(interface_list)) ?	// Interfaces
-	   ", " : "", interface_list, " {", derived ? typemapLookup(n, "csbody_derived", typemap_lookup_type, WARN_CSHARP_TYPEMAP_CSBODY_UNDEF) :	// main body of class
-	   typemapLookup(n, "csbody", typemap_lookup_type, WARN_CSHARP_TYPEMAP_CSBODY_UNDEF),	// main body of class
-	   NIL);
+      " $csclassname",	// Class name and base class
+      (*Char(wanted_base) || *Char(interface_list)) ? " : " : "", wanted_base, (*Char(wanted_base) && *Char(interface_list)) ?	// Interfaces
+      ", " : "", interface_list, " {", derived ? typemapLookup(n, "csbody_derived", typemap_lookup_type, WARN_CSHARP_TYPEMAP_CSBODY_UNDEF) :	// main body of class
+      typemapLookup(n, "csbody", typemap_lookup_type, WARN_CSHARP_TYPEMAP_CSBODY_UNDEF),	// main body of class
+      NIL);
 
     // C++ destructor is wrapped by the Dispose method
     // Note that the method name is specified in a typemap attribute called methodname
@@ -1909,7 +1909,7 @@ public:
       }
       if (!destruct_methodmodifiers) {
 	Swig_error(Getfile(n), Getline(n),
-		   "No methodmodifiers attribute defined in csdestruct%s typemap for %s.\n", (derived ? "_derived" : ""), proxy_class_name);
+	  "No methodmodifiers attribute defined in csdestruct%s typemap for %s.\n", (derived ? "_derived" : ""), proxy_class_name);
       }
     }
     // Emit the Finalize and Dispose methods
@@ -1926,7 +1926,7 @@ public:
 	Replaceall(destruct, "$imcall", "throw new global::System.MethodAccessException(\"C++ destructor does not have public access\")");
       if (*Char(destruct))
 	Printv(proxy_class_def, "\n  ", destruct_methodmodifiers, " ", derived ? "override" : "virtual", " void ", destruct_methodname, "() ", destruct, "\n",
-	       NIL);
+	NIL);
     }
     if (*Char(interface_upcasts))
       Printv(proxy_class_def, interface_upcasts, NIL);
@@ -1960,27 +1960,27 @@ public:
 	Printf(proxy_class_code, "\n");
 	Printf(proxy_class_code, "  private bool SwigDerivedClassHasMethod(string methodName, global::System.Type[] methodTypes) {\n");
 	Printf(proxy_class_code,
-	       "    global::System.Reflection.MethodInfo methodInfo = this.GetType().GetMethod(methodName, global::System.Reflection.BindingFlags.Public | global::System.Reflection.BindingFlags.NonPublic | global::System.Reflection.BindingFlags.Instance, null, methodTypes, null);\n");
+	  "    global::System.Reflection.MethodInfo methodInfo = this.GetType().GetMethod(methodName, global::System.Reflection.BindingFlags.Public | global::System.Reflection.BindingFlags.NonPublic | global::System.Reflection.BindingFlags.Instance, null, methodTypes, null);\n");
 	Printf(proxy_class_code, "    bool hasDerivedMethod = methodInfo.DeclaringType.IsSubclassOf(typeof(%s));\n", proxy_class_name);
 	/* Could add this code to cover corner case where the GetMethod() returns a method which allows type
-	 * promotion, eg it will return foo(double), if looking for foo(int).
-	 if (hasDerivedMethod) {
-	 hasDerivedMethod = false;
-	 if (methodInfo != null)
-	 {
-	 hasDerivedMethod = true;
-	 ParameterInfo[] parameterArray1 = methodInfo.GetParameters();
-	 for (int i=0; i<methodTypes.Length; i++)
-	 {
-	 if (parameterArray1[0].ParameterType != methodTypes[0])
-	 {
-	 hasDerivedMethod = false;
-	 break;
-	 }
-	 }
-	 }
-	 }
-	 */
+	* promotion, eg it will return foo(double), if looking for foo(int).
+	if (hasDerivedMethod) {
+	hasDerivedMethod = false;
+	if (methodInfo != null)
+	{
+	hasDerivedMethod = true;
+	ParameterInfo[] parameterArray1 = methodInfo.GetParameters();
+	for (int i=0; i<methodTypes.Length; i++)
+	{
+	if (parameterArray1[0].ParameterType != methodTypes[0])
+	{
+	hasDerivedMethod = false;
+	break;
+	}
+	}
+	}
+	}
+	*/
 	Printf(proxy_class_code, "    return hasDerivedMethod;\n");
 	Printf(proxy_class_code, "  }\n");
       }
@@ -2018,7 +2018,7 @@ public:
 
     // Emit extra user code
     Printv(proxy_class_def, typemapLookup(n, "cscode", typemap_lookup_type, WARN_NONE),	// extra C# code
-	   "\n", NIL);
+      "\n", NIL);
 
     // Add code to do C++ casting to base class (only for classes in an inheritance hierarchy)
     if (derived) {
@@ -2041,17 +2041,17 @@ public:
 	String *smartnamestr = SwigType_namestr(smart);
 	String *bsmartnamestr = SwigType_namestr(bsmart);
 	Printv(upcasts_code,
-	       "SWIGEXPORT ", bsmartnamestr, " * SWIGSTDCALL ", wname, "(", smartnamestr, " *jarg1) {\n",
-	       "    return jarg1 ? new ", bsmartnamestr, "(*jarg1) : 0;\n"
-	       "}\n", "\n", NIL);
+	  "SWIGEXPORT ", bsmartnamestr, " * SWIGSTDCALL ", wname, "(", smartnamestr, " *jarg1) {\n",
+	  "    return jarg1 ? new ", bsmartnamestr, "(*jarg1) : 0;\n"
+	  "}\n", "\n", NIL);
 	Delete(bsmartnamestr);
 	Delete(smartnamestr);
 	Delete(bsmart);
       } else {
 	Printv(upcasts_code,
-	       "SWIGEXPORT ", c_baseclass, " * SWIGSTDCALL ", wname, "(", c_classname, " *jarg1) {\n",
-	       "    return (", c_baseclass, " *)jarg1;\n"
-	       "}\n", "\n", NIL);
+	  "SWIGEXPORT ", c_baseclass, " * SWIGSTDCALL ", wname, "(", c_classname, " *jarg1) {\n",
+	  "    return (", c_baseclass, " *)jarg1;\n"
+	  "}\n", "\n", NIL);
       }
       Delete(wname);
       Delete(upcast_method);
@@ -2095,9 +2095,9 @@ public:
     Printf(f_interface, "public sealed class %s : %s {\n", impname, proxy_class_name);
     Printf(f_interface, "  private HandleRef swigCPtr;");
     Printf(f_interface,
-"  [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]\n"
-"  public %s(IntPtr cPtr, bool cMemoryOwn) : base(cPtr, cMemoryOwn) {\n"
-"    swigCPtr = new HandleRef(this, cPtr);\n    }\n", impname);
+      "  [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]\n"
+      "  public %s(IntPtr cPtr, bool cMemoryOwn) : base(cPtr, cMemoryOwn) {\n"
+      "    swigCPtr = new HandleRef(this, cPtr);\n    }\n", impname);
   }
 
   void calculateDirectBase(Node* n)
@@ -2115,7 +2115,7 @@ public:
 	Iterator base = First(baselist);
 	while (base.item && (GetFlag(base.item, "feature:ignore") || Getattr(base.item, "feature:interface")))
 	  base = Next(base);
-        direct_base = base.item;
+	direct_base = base.item;
       }
       if (!direct_base && purebase_notderived)
 	direct_base = symbolLookup(const_cast<String*>(pure_baseclass));
@@ -2125,8 +2125,8 @@ public:
     Setattr(n, "direct_base", direct_base);
   }
   /* ----------------------------------------------------------------------
-   * classHandler()
-   * ---------------------------------------------------------------------- */
+  * classHandler()
+  * ---------------------------------------------------------------------- */
 
   virtual int classHandler(Node *n) {
     String *nspace = getNSpace();
@@ -2300,9 +2300,9 @@ public:
       }
 
       /* Output the downcast method, if necessary. Note: There's no other really
-         good place to put this code, since Abstract Base Classes (ABCs) can and should have 
-         downcasts, making the constructorHandler() a bad place (because ABCs don't get to
-         have constructors emitted.) */
+      good place to put this code, since Abstract Base Classes (ABCs) can and should have 
+      downcasts, making the constructorHandler() a bad place (because ABCs don't get to
+      have constructors emitted.) */
       if (GetFlag(n, "feature:csdowncast")) {
 	String *downcast_method = Swig_name_member(getNSpace(), proxy_class_name, "SWIGDowncast");
 	String *wname = Swig_name_wrapper(downcast_method);
@@ -2328,6 +2328,7 @@ public:
 	Delete(norm_name);
 	Delete(wname);
 	Delete(downcast_method);
+      }
       if (f_interface) {
 	Printv(f_interface, interface_class_code, "}\n", NIL);
 	addCloseNamespace(nspace, f_interface);
@@ -2356,8 +2357,8 @@ public:
   }
 
   /* ----------------------------------------------------------------------
-   * memberfunctionHandler()
-   * ---------------------------------------------------------------------- */
+  * memberfunctionHandler()
+  * ---------------------------------------------------------------------- */
 
   virtual int memberfunctionHandler(Node *n) {
     Language::memberfunctionHandler(n);
@@ -2374,8 +2375,8 @@ public:
   }
 
   /* ----------------------------------------------------------------------
-   * staticmemberfunctionHandler()
-   * ---------------------------------------------------------------------- */
+  * staticmemberfunctionHandler()
+  * ---------------------------------------------------------------------- */
 
   virtual int staticmemberfunctionHandler(Node *n) {
 
@@ -2397,15 +2398,15 @@ public:
 
 
   /* -----------------------------------------------------------------------------
-   * proxyClassFunctionHandler()
-   *
-   * Function called for creating a C# wrapper function around a c++ function in the 
-   * proxy class. Used for both static and non-static C++ class functions.
-   * C++ class static functions map to C# static functions.
-   * Two extra attributes in the Node must be available. These are "proxyfuncname" - 
-   * the name of the C# class proxy function, which in turn will call "imfuncname" - 
-   * the intermediary (PInvoke) function name in the intermediary class.
-   * ----------------------------------------------------------------------------- */
+  * proxyClassFunctionHandler()
+  *
+  * Function called for creating a C# wrapper function around a c++ function in the 
+  * proxy class. Used for both static and non-static C++ class functions.
+  * C++ class static functions map to C# static functions.
+  * Two extra attributes in the Node must be available. These are "proxyfuncname" - 
+  * the name of the C# class proxy function, which in turn will call "imfuncname" - 
+  * the intermediary (PInvoke) function name in the intermediary class.
+  * ----------------------------------------------------------------------------- */
 
   void proxyClassFunctionHandler(Node *n) {
     SwigType *t = Getattr(n, "type");
@@ -2459,7 +2460,7 @@ public:
       Printf(return_type, "%s", tm);
       if (covariant)
 	Swig_warning(WARN_CSHARP_COVARIANT_RET, input_file, line_number,
-		     "Covariant return types not supported in C#. Proxy method will return %s.\n", SwigType_str(covariant, 0));
+	"Covariant return types not supported in C#. Proxy method will return %s.\n", SwigType_str(covariant, 0));
     } else {
       Swig_warning(WARN_CSHARP_TYPEMAP_CSWTYPE_UNDEF, input_file, line_number, "No cstype typemap defined for %s\n", SwigType_str(t, 0));
     }
@@ -2468,7 +2469,7 @@ public:
       // Properties
       setter_flag = (Cmp(Getattr(n, "sym:name"), Swig_name_set(getNSpace(), Swig_name_member(0, getClassPrefix(), variable_name))) == 0);
       if (setter_flag)
-        Swig_typemap_attach_parms("csvarin", l, NULL);
+	Swig_typemap_attach_parms("csvarin", l, NULL);
     }
 
     // translate and write comment if flagged
@@ -2537,7 +2538,7 @@ public:
       Printf(interface_class_code, "  %s %s(", return_type, proxy_function_name);
     if (is_abstract_class_member)
       Printf(proxy_class_code, "  %s %s(", return_type, proxy_function_name);
-    
+
 
     Printv(imcall, full_imclass_name, ".$imfuncname(", NIL);
     if (!static_flag)
@@ -2566,8 +2567,8 @@ public:
       if (!(variable_wrapper_flag && i == 0)) {
 	SwigType *pt = Getattr(p, "type");
 	String *param_type = NewString("");
-        if (setter_flag)
-          last_parm = p;
+	if (setter_flag)
+	  last_parm = p;
 
 	/* Get the C# parameter type */
 	if ((tm = Getattr(p, "tmap:cstype"))) {
@@ -2587,30 +2588,30 @@ public:
 	if ((tm = Getattr(p, "tmap:csin"))) {
 	  substituteClassname(pt, tm);
 	  Replaceall(tm, "$csinput", arg);
-          String *pre = Getattr(p, "tmap:csin:pre");
-          if (pre) {
-            substituteClassname(pt, pre);
-            Replaceall(pre, "$csinput", arg);
-            if (Len(pre_code) > 0)
-              Printf(pre_code, "\n");
-            Printv(pre_code, pre, NIL);
-          }
-          String *post = Getattr(p, "tmap:csin:post");
-          if (post) {
-            substituteClassname(pt, post);
-            Replaceall(post, "$csinput", arg);
-            if (Len(post_code) > 0)
-              Printf(post_code, "\n");
-            Printv(post_code, post, NIL);
-          }
-          String *terminator = Getattr(p, "tmap:csin:terminator");
-          if (terminator) {
-            substituteClassname(pt, terminator);
-            Replaceall(terminator, "$csinput", arg);
-            if (Len(terminator_code) > 0)
-              Insert(terminator_code, 0, "\n");
-            Insert(terminator_code, 0, terminator);
-          }
+	  String *pre = Getattr(p, "tmap:csin:pre");
+	  if (pre) {
+	    substituteClassname(pt, pre);
+	    Replaceall(pre, "$csinput", arg);
+	    if (Len(pre_code) > 0)
+	      Printf(pre_code, "\n");
+	    Printv(pre_code, pre, NIL);
+	  }
+	  String *post = Getattr(p, "tmap:csin:post");
+	  if (post) {
+	    substituteClassname(pt, post);
+	    Replaceall(post, "$csinput", arg);
+	    if (Len(post_code) > 0)
+	      Printf(post_code, "\n");
+	    Printv(post_code, post, NIL);
+	  }
+	  String *terminator = Getattr(p, "tmap:csin:terminator");
+	  if (terminator) {
+	    substituteClassname(pt, terminator);
+	    Replaceall(terminator, "$csinput", arg);
+	    if (Len(terminator_code) > 0)
+	      Insert(terminator_code, 0, "\n");
+	    Insert(terminator_code, 0, terminator);
+	  }
 	  Printv(imcall, tm, NIL);
 	} else {
 	  Swig_warning(WARN_CSHARP_TYPEMAP_CSIN_UNDEF, input_file, line_number, "No csin typemap defined for %s\n", SwigType_str(pt, 0));
@@ -2651,20 +2652,20 @@ public:
       bool is_post_code = Len(post_code) > 0;
       bool is_terminator_code = Len(terminator_code) > 0;
       if (is_pre_code || is_post_code || is_terminator_code) {
-        Replaceall(tm, "\n ", "\n   "); // add extra indentation to code in typemap
-        if (is_post_code) {
-          Insert(tm, 0, "\n    try ");
-          Printv(tm, " finally {\n", post_code, "\n    }", NIL);
-        } else {
-          Insert(tm, 0, "\n    ");
-        }
-        if (is_pre_code) {
-          Insert(tm, 0, pre_code);
-          Insert(tm, 0, "\n");
-        }
-        if (is_terminator_code) {
-          Printv(tm, "\n", terminator_code, NIL);
-        }
+	Replaceall(tm, "\n ", "\n   "); // add extra indentation to code in typemap
+	if (is_post_code) {
+	  Insert(tm, 0, "\n    try ");
+	  Printv(tm, " finally {\n", post_code, "\n    }", NIL);
+	} else {
+	  Insert(tm, 0, "\n    ");
+	}
+	if (is_pre_code) {
+	  Insert(tm, 0, pre_code);
+	  Insert(tm, 0, "\n");
+	}
+	if (is_terminator_code) {
+	  Printv(tm, "\n", terminator_code, NIL);
+	}
 	Insert(tm, 0, "{");
 	Printf(tm, "\n  }");
       }
@@ -2784,8 +2785,8 @@ public:
   }
 
   /* ----------------------------------------------------------------------
-   * constructorHandler()
-   * ---------------------------------------------------------------------- */
+  * constructorHandler()
+  * ---------------------------------------------------------------------- */
 
   virtual int constructorHandler(Node *n) {
 
@@ -2881,39 +2882,39 @@ public:
 	  Printf(imcall, ", ");
 
 	String *arg = makeParameterName(n, p, i, false);
-        String *cshin = 0;
+	String *cshin = 0;
 
 	// Use typemaps to transform type used in C# wrapper function (in proxy class) to type used in PInvoke function (in intermediary class)
 	if ((tm = Getattr(p, "tmap:csin"))) {
 	  substituteClassname(pt, tm);
 	  Replaceall(tm, "$csinput", arg);
-          String *pre = Getattr(p, "tmap:csin:pre");
-          if (pre) {
-            substituteClassname(pt, pre);
-            Replaceall(pre, "$csinput", arg);
-            if (Len(pre_code) > 0)
-              Printf(pre_code, "\n");
-            Printv(pre_code, pre, NIL);
-          }
-          String *post = Getattr(p, "tmap:csin:post");
-          if (post) {
-            substituteClassname(pt, post);
-            Replaceall(post, "$csinput", arg);
-            if (Len(post_code) > 0)
-              Printf(post_code, "\n");
-            Printv(post_code, post, NIL);
-          }
-          String *terminator = Getattr(p, "tmap:csin:terminator");
-          if (terminator) {
-            substituteClassname(pt, terminator);
-            Replaceall(terminator, "$csinput", arg);
-            if (Len(terminator_code) > 0)
-              Insert(terminator_code, 0, "\n");
-            Insert(terminator_code, 0, terminator);
-          }
-          cshin = Getattr(p, "tmap:csin:cshin");
-          if (cshin)
-            Replaceall(cshin, "$csinput", arg);
+	  String *pre = Getattr(p, "tmap:csin:pre");
+	  if (pre) {
+	    substituteClassname(pt, pre);
+	    Replaceall(pre, "$csinput", arg);
+	    if (Len(pre_code) > 0)
+	      Printf(pre_code, "\n");
+	    Printv(pre_code, pre, NIL);
+	  }
+	  String *post = Getattr(p, "tmap:csin:post");
+	  if (post) {
+	    substituteClassname(pt, post);
+	    Replaceall(post, "$csinput", arg);
+	    if (Len(post_code) > 0)
+	      Printf(post_code, "\n");
+	    Printv(post_code, post, NIL);
+	  }
+	  String *terminator = Getattr(p, "tmap:csin:terminator");
+	  if (terminator) {
+	    substituteClassname(pt, terminator);
+	    Replaceall(terminator, "$csinput", arg);
+	    if (Len(terminator_code) > 0)
+	      Insert(terminator_code, 0, "\n");
+	    Insert(terminator_code, 0, terminator);
+	  }
+	  cshin = Getattr(p, "tmap:csin:cshin");
+	  if (cshin)
+	    Replaceall(cshin, "$csinput", arg);
 	  Printv(imcall, tm, NIL);
 	} else {
 	  Swig_warning(WARN_CSHARP_TYPEMAP_CSIN_UNDEF, input_file, line_number, "No csin typemap defined for %s\n", SwigType_str(pt, 0));
@@ -2924,7 +2925,7 @@ public:
 	  Printf(function_code, ", ");
 	  Printf(helper_code, ", ");
 	  Printf(helper_args, ", ");
-        }
+	}
 	Printf(function_code, "%s %s", param_type, arg);
 	Printf(helper_code, "%s %s", param_type, arg);
 	Printf(helper_args, "%s", cshin ? cshin : arg);
@@ -2944,7 +2945,7 @@ public:
       /* Insert the csconstruct typemap, doing the replacement for $directorconnect, as needed */
       Hash *attributes = NewHash();
       String *construct_tm = Copy(typemapLookup(n, "csconstruct", Getattr(n, "name"),
-						WARN_CSHARP_TYPEMAP_CSCONSTRUCT_UNDEF, attributes));
+	WARN_CSHARP_TYPEMAP_CSCONSTRUCT_UNDEF, attributes));
       if (construct_tm) {
 	if (!feature_director) {
 	  Replaceall(construct_tm, "$directorconnect", "");
@@ -2955,7 +2956,7 @@ public:
 	    Replaceall(construct_tm, "$directorconnect", connect_attr);
 	  } else {
 	    Swig_warning(WARN_CSHARP_NO_DIRECTORCONNECT_ATTR, input_file, line_number, "\"directorconnect\" attribute missing in %s \"csconstruct\" typemap.\n",
-			 Getattr(n, "name"));
+	      Getattr(n, "name"));
 	    Replaceall(construct_tm, "$directorconnect", "");
 	  }
 	}
@@ -2969,30 +2970,30 @@ public:
       bool is_post_code = Len(post_code) > 0;
       bool is_terminator_code = Len(terminator_code) > 0;
       if (is_pre_code || is_post_code || is_terminator_code) {
-        Printf(helper_code, " {\n");
-        if (is_pre_code) {
-          Printv(helper_code, pre_code, "\n", NIL);
-        }
-        if (is_post_code) {
-          Printf(helper_code, "    try {\n");
-          Printv(helper_code, "      return ", imcall, ";\n", NIL);
-          Printv(helper_code, "    } finally {\n", post_code, "\n    }", NIL);
-        } else {
-          Printv(helper_code, "    return ", imcall, ";", NIL);
-        }
-        if (is_terminator_code) {
-          Printv(helper_code, "\n", terminator_code, NIL);
-        }
-        Printf(helper_code, "\n  }\n");
-        String *helper_name = NewStringf("%s.SwigConstruct%s(%s)", proxy_class_name, proxy_class_name, helper_args);
-        String *im_outattributes = Getattr(n, "tmap:imtype:outattributes");
-        if (im_outattributes)
-          Printf(proxy_class_code, "  %s\n", im_outattributes);
-        Printv(proxy_class_code, helper_code, "\n", NIL);
-        Replaceall(function_code, "$imcall", helper_name);
-        Delete(helper_name);
+	Printf(helper_code, " {\n");
+	if (is_pre_code) {
+	  Printv(helper_code, pre_code, "\n", NIL);
+	}
+	if (is_post_code) {
+	  Printf(helper_code, "    try {\n");
+	  Printv(helper_code, "      return ", imcall, ";\n", NIL);
+	  Printv(helper_code, "    } finally {\n", post_code, "\n    }", NIL);
+	} else {
+	  Printv(helper_code, "    return ", imcall, ";", NIL);
+	}
+	if (is_terminator_code) {
+	  Printv(helper_code, "\n", terminator_code, NIL);
+	}
+	Printf(helper_code, "\n  }\n");
+	String *helper_name = NewStringf("%s.SwigConstruct%s(%s)", proxy_class_name, proxy_class_name, helper_args);
+	String *im_outattributes = Getattr(n, "tmap:imtype:outattributes");
+	if (im_outattributes)
+	  Printf(proxy_class_code, "  %s\n", im_outattributes);
+	Printv(proxy_class_code, helper_code, "\n", NIL);
+	Replaceall(function_code, "$imcall", helper_name);
+	Delete(helper_name);
       } else {
-        Replaceall(function_code, "$imcall", imcall);
+	Replaceall(function_code, "$imcall", imcall);
       }
 
       Printv(proxy_class_code, function_code, "\n", NIL);
@@ -3012,8 +3013,8 @@ public:
   }
 
   /* ----------------------------------------------------------------------
-   * destructorHandler()
-   * ---------------------------------------------------------------------- */
+  * destructorHandler()
+  * ---------------------------------------------------------------------- */
 
   virtual int destructorHandler(Node *n) {
     Language::destructorHandler(n);
@@ -3026,8 +3027,8 @@ public:
   }
 
   /* ----------------------------------------------------------------------
-   * membervariableHandler()
-   * ---------------------------------------------------------------------- */
+  * membervariableHandler()
+  * ---------------------------------------------------------------------- */
 
   virtual int membervariableHandler(Node *n) {
 
@@ -3046,8 +3047,8 @@ public:
   }
 
   /* ----------------------------------------------------------------------
-   * staticmembervariableHandler()
-   * ---------------------------------------------------------------------- */
+  * staticmembervariableHandler()
+  * ---------------------------------------------------------------------- */
 
   virtual int staticmembervariableHandler(Node *n) {
 
@@ -3069,8 +3070,8 @@ public:
   }
 
   /* ----------------------------------------------------------------------
-   * memberconstantHandler()
-   * ---------------------------------------------------------------------- */
+  * memberconstantHandler()
+  * ---------------------------------------------------------------------- */
 
   virtual int memberconstantHandler(Node *n) {
     variable_name = Getattr(n, "sym:name");
@@ -3081,14 +3082,14 @@ public:
   }
 
   /* -----------------------------------------------------------------------------
-   * getOverloadedName()
-   * ----------------------------------------------------------------------------- */
+  * getOverloadedName()
+  * ----------------------------------------------------------------------------- */
 
   String *getOverloadedName(Node *n) {
 
     /* A C# HandleRef is used for all classes in the SWIG intermediary class.
-     * The intermediary class methods are thus mangled when overloaded to give
-     * a unique name. */
+    * The intermediary class methods are thus mangled when overloaded to give
+    * a unique name. */
     String *overloaded_name = NewStringf("%s", Getattr(n, "sym:name"));
 
     if (Getattr(n, "sym:overloaded")) {
@@ -3099,8 +3100,8 @@ public:
   }
 
   /* -----------------------------------------------------------------------------
-   * moduleClassFunctionHandler()
-   * ----------------------------------------------------------------------------- */
+  * moduleClassFunctionHandler()
+  * ----------------------------------------------------------------------------- */
 
   void moduleClassFunctionHandler(Node *n) {
     SwigType *t = Getattr(n, "type");
@@ -3162,7 +3163,7 @@ public:
       Putc(toupper((int) *Char(variable_name)), func_name);
       Printf(func_name, "%s", Char(variable_name) + 1);
       if (setter_flag)
-        Swig_typemap_attach_parms("csvarin", l, NULL);
+	Swig_typemap_attach_parms("csvarin", l, NULL);
     } else {
       func_name = Copy(Getattr(n, "sym:name"));
     }
@@ -3219,26 +3220,26 @@ public:
 	if (pre) {
 	  substituteClassname(pt, pre);
 	  Replaceall(pre, "$csinput", arg);
-          if (Len(pre_code) > 0)
-            Printf(pre_code, "\n");
+	  if (Len(pre_code) > 0)
+	    Printf(pre_code, "\n");
 	  Printv(pre_code, pre, NIL);
 	}
 	String *post = Getattr(p, "tmap:csin:post");
 	if (post) {
 	  substituteClassname(pt, post);
 	  Replaceall(post, "$csinput", arg);
-          if (Len(post_code) > 0)
-            Printf(post_code, "\n");
+	  if (Len(post_code) > 0)
+	    Printf(post_code, "\n");
 	  Printv(post_code, post, NIL);
 	}
-        String *terminator = Getattr(p, "tmap:csin:terminator");
-        if (terminator) {
-          substituteClassname(pt, terminator);
-          Replaceall(terminator, "$csinput", arg);
-          if (Len(terminator_code) > 0)
-            Insert(terminator_code, 0, "\n");
-          Insert(terminator_code, 0, terminator);
-        }
+	String *terminator = Getattr(p, "tmap:csin:terminator");
+	if (terminator) {
+	  substituteClassname(pt, terminator);
+	  Replaceall(terminator, "$csinput", arg);
+	  if (Len(terminator_code) > 0)
+	    Insert(terminator_code, 0, "\n");
+	  Insert(terminator_code, 0, terminator);
+	}
 	Printv(imcall, tm, NIL);
       } else {
 	Swig_warning(WARN_CSHARP_TYPEMAP_CSIN_UNDEF, input_file, line_number, "No csin typemap defined for %s\n", SwigType_str(pt, 0));
@@ -3265,20 +3266,20 @@ public:
       bool is_post_code = Len(post_code) > 0;
       bool is_terminator_code = Len(terminator_code) > 0;
       if (is_pre_code || is_post_code || is_terminator_code) {
-        Replaceall(tm, "\n ", "\n   "); // add extra indentation to code in typemap
-        if (is_post_code) {
-          Insert(tm, 0, "\n    try ");
-          Printv(tm, " finally {\n", post_code, "\n    }", NIL);
-        } else {
-          Insert(tm, 0, "\n    ");
-        }
-        if (is_pre_code) {
-          Insert(tm, 0, pre_code);
-          Insert(tm, 0, "\n");
-        }
-        if (is_terminator_code) {
-          Printv(tm, "\n", terminator_code, NIL);
-        }
+	Replaceall(tm, "\n ", "\n   "); // add extra indentation to code in typemap
+	if (is_post_code) {
+	  Insert(tm, 0, "\n    try ");
+	  Printv(tm, " finally {\n", post_code, "\n    }", NIL);
+	} else {
+	  Insert(tm, 0, "\n    ");
+	}
+	if (is_pre_code) {
+	  Insert(tm, 0, pre_code);
+	  Insert(tm, 0, "\n");
+	}
+	if (is_terminator_code) {
+	  Printv(tm, "\n", terminator_code, NIL);
+	}
 	Insert(tm, 0, "{");
 	Printf(tm, "\n  }");
       }
@@ -3302,7 +3303,7 @@ public:
 	  SwigType *pt = Getattr(p, "type");
 	  if ((tm = Getattr(p, "tmap:cstype"))) {
 	    substituteClassname(pt, tm);
-            String *cstypeout = Getattr(p, "tmap:cstype:out");	// the type in the cstype typemap's out attribute overrides the type in the typemap
+	    String *cstypeout = Getattr(p, "tmap:cstype:out");	// the type in the cstype typemap's out attribute overrides the type in the typemap
 	    variable_type = cstypeout ? cstypeout : tm;
 	  } else {
 	    Swig_warning(WARN_CSHARP_TYPEMAP_CSOUT_UNDEF, input_file, line_number, "No csvarin typemap defined for %s\n", SwigType_str(pt, 0));
@@ -3362,8 +3363,8 @@ public:
   }
 
   /*----------------------------------------------------------------------
-   * replaceSpecialVariables()
-   *--------------------------------------------------------------------*/
+  * replaceSpecialVariables()
+  *--------------------------------------------------------------------*/
 
   virtual void replaceSpecialVariables(String *method, String *tm, Parm *parm) {
     (void)method;
@@ -3372,13 +3373,13 @@ public:
   }
 
   /*----------------------------------------------------------------------
-   * decodeEnumFeature()
-   * Decode the possible enum features, which are one of:
-   *   %csenum(simple)
-   *   %csenum(typeunsafe) - default
-   *   %csenum(typesafe)
-   *   %csenum(proper)
-   *--------------------------------------------------------------------*/
+  * decodeEnumFeature()
+  * Decode the possible enum features, which are one of:
+  *   %csenum(simple)
+  *   %csenum(typeunsafe) - default
+  *   %csenum(typesafe)
+  *   %csenum(proper)
+  *--------------------------------------------------------------------*/
 
   EnumFeature decodeEnumFeature(Node *n) {
     EnumFeature enum_feature = TypeunsafeEnum;
@@ -3395,15 +3396,15 @@ public:
   }
 
   /* -----------------------------------------------------------------------
-   * enumValue()
-   * This method will return a string with an enum value to use in C# generated
-   * code. If the %csconst feature is not used, the string will contain the intermediary
-   * class call to obtain the enum value. The intermediary class and PINVOKE methods to obtain
-   * the enum value will be generated. Otherwise the C/C++ enum value will be used if there
-   * is one and hopefully it will compile as C# code - e.g. 20 as in: enum E{e=20};
-   * The %csconstvalue feature overrides all other ways to generate the constant value.
-   * The caller must delete memory allocated for the returned string.
-   * ------------------------------------------------------------------------ */
+  * enumValue()
+  * This method will return a string with an enum value to use in C# generated
+  * code. If the %csconst feature is not used, the string will contain the intermediary
+  * class call to obtain the enum value. The intermediary class and PINVOKE methods to obtain
+  * the enum value will be generated. Otherwise the C/C++ enum value will be used if there
+  * is one and hopefully it will compile as C# code - e.g. 20 as in: enum E{e=20};
+  * The %csconstvalue feature overrides all other ways to generate the constant value.
+  * The caller must delete memory allocated for the returned string.
+  * ------------------------------------------------------------------------ */
 
   String *enumValue(Node *n) {
     String *symname = Getattr(n, "sym:name");
@@ -3445,8 +3446,8 @@ public:
   }
 
   /* -----------------------------------------------------------------------------
-   * getEnumName()
-   * ----------------------------------------------------------------------------- */
+  * getEnumName()
+  * ----------------------------------------------------------------------------- */
 
   String *getEnumName(SwigType *t) {
     Node *enumname = NULL;
@@ -3487,20 +3488,20 @@ public:
   }
 
   /* -----------------------------------------------------------------------------
-   * substituteClassname()
-   *
-   * Substitute the special variable $csclassname with the proxy class name for classes/structs/unions 
-   * that SWIG knows about. Also substitutes enums with enum name.
-   * Otherwise use the $descriptor name for the C# class name. Note that the $&csclassname substitution
-   * is the same as a $&descriptor substitution, ie one pointer added to descriptor name.
-   * Inputs:
-   *   pt - parameter type
-   *   tm - typemap contents that might contain the special variable to be replaced
-   * Outputs:
-   *   tm - typemap contents complete with the special variable substitution
-   * Return:
-   *   substitution_performed - flag indicating if a substitution was performed
-   * ----------------------------------------------------------------------------- */
+  * substituteClassname()
+  *
+  * Substitute the special variable $csclassname with the proxy class name for classes/structs/unions 
+  * that SWIG knows about. Also substitutes enums with enum name.
+  * Otherwise use the $descriptor name for the C# class name. Note that the $&csclassname substitution
+  * is the same as a $&descriptor substitution, ie one pointer added to descriptor name.
+  * Inputs:
+  *   pt - parameter type
+  *   tm - typemap contents that might contain the special variable to be replaced
+  * Outputs:
+  *   tm - typemap contents complete with the special variable substitution
+  * Return:
+  *   substitution_performed - flag indicating if a substitution was performed
+  * ----------------------------------------------------------------------------- */
 
   bool substituteClassname(SwigType *pt, String *tm) {
     bool substitution_performed = false;
@@ -3537,8 +3538,8 @@ public:
   }
 
   /* -----------------------------------------------------------------------------
-   * substituteClassnameSpecialVariable()
-   * ----------------------------------------------------------------------------- */
+  * substituteClassnameSpecialVariable()
+  * ----------------------------------------------------------------------------- */
 
   void substituteClassnameSpecialVariable(SwigType *classnametype, String *tm, const char *classnamespecialvariable) {
     String *replacementname;
@@ -3575,8 +3576,8 @@ public:
   }
 
   /* -----------------------------------------------------------------------------
-   * emitTypeWrapperClass()
-   * ----------------------------------------------------------------------------- */
+  * emitTypeWrapperClass()
+  * ----------------------------------------------------------------------------- */
 
   void emitTypeWrapperClass(String *classname, SwigType *type) {
     Node *n = NewHash();
@@ -3594,7 +3595,7 @@ public:
 
     // Emit the class
     Printv(swigtype, typemapLookup(n, "csimports", type, WARN_NONE),	// Import statements
-	   "\n", NIL);
+      "\n", NIL);
 
     // Class attributes
     const String *csattributes = typemapLookup(n, "csattributes", type, WARN_NONE);
@@ -3602,11 +3603,11 @@ public:
       Printf(swigtype, "%s\n", csattributes);
 
     Printv(swigtype, typemapLookup(n, "csclassmodifiers", type, WARN_CSHARP_TYPEMAP_CLASSMOD_UNDEF),	// Class modifiers
-	   " $csclassname",	// Class name and base class
-	   (*Char(pure_baseclass) || *Char(pure_interfaces)) ? " : " : "", pure_baseclass, ((*Char(pure_baseclass)) && *Char(pure_interfaces)) ?	// Interfaces
-	   ", " : "", pure_interfaces, " {", typemapLookup(n, "csbody", type, WARN_CSHARP_TYPEMAP_CSBODY_UNDEF),	// main body of class
-	   typemapLookup(n, "cscode", type, WARN_NONE),	// extra C# code
-	   "}\n", NIL);
+      " $csclassname",	// Class name and base class
+      (*Char(pure_baseclass) || *Char(pure_interfaces)) ? " : " : "", pure_baseclass, ((*Char(pure_baseclass)) && *Char(pure_interfaces)) ?	// Interfaces
+      ", " : "", pure_interfaces, " {", typemapLookup(n, "csbody", type, WARN_CSHARP_TYPEMAP_CSBODY_UNDEF),	// main body of class
+      typemapLookup(n, "cscode", type, WARN_NONE),	// extra C# code
+      "}\n", NIL);
 
     Replaceall(swigtype, "$csclassname", classname);
     Replaceall(swigtype, "$module", module_class_name);
@@ -3627,15 +3628,15 @@ public:
   }
 
   /* -----------------------------------------------------------------------------
-   * typemapLookup()
-   * n - for input only and must contain info for Getfile(n) and Getline(n) to work
-   * tmap_method - typemap method name
-   * type - typemap type to lookup
-   * warning - warning number to issue if no typemaps found
-   * typemap_attributes - the typemap attributes are attached to this node and will 
-   *   also be used for temporary storage if non null
-   * return is never NULL, unlike Swig_typemap_lookup()
-   * ----------------------------------------------------------------------------- */
+  * typemapLookup()
+  * n - for input only and must contain info for Getfile(n) and Getline(n) to work
+  * tmap_method - typemap method name
+  * type - typemap type to lookup
+  * warning - warning number to issue if no typemaps found
+  * typemap_attributes - the typemap attributes are attached to this node and will 
+  *   also be used for temporary storage if non null
+  * return is never NULL, unlike Swig_typemap_lookup()
+  * ----------------------------------------------------------------------------- */
 
   const String *typemapLookup(Node *n, const_String_or_char_ptr tmap_method, SwigType *type, int warning, Node *typemap_attributes = 0) {
     Node *node = !typemap_attributes ? NewHash() : typemap_attributes;
@@ -3654,10 +3655,10 @@ public:
   }
 
   /* -----------------------------------------------------------------------------
-   * canThrow()
-   * Determine whether the code in the typemap can throw a C# exception.
-   * If so, note it for later when excodeSubstitute() is called.
-   * ----------------------------------------------------------------------------- */
+  * canThrow()
+  * Determine whether the code in the typemap can throw a C# exception.
+  * If so, note it for later when excodeSubstitute() is called.
+  * ----------------------------------------------------------------------------- */
 
   void canThrow(Node *n, const String *typemap, Node *parameter) {
     String *canthrow_attribute = NewStringf("tmap:%s:canthrow", typemap);
@@ -3668,12 +3669,12 @@ public:
   }
 
   /* -----------------------------------------------------------------------------
-   * excodeSubstitute()
-   * If a method can throw a C# exception, additional exception code is added to
-   * check for the pending exception so that it can then throw the exception. The
-   * $excode special variable is replaced by the exception code in the excode
-   * typemap attribute.
-   * ----------------------------------------------------------------------------- */
+  * excodeSubstitute()
+  * If a method can throw a C# exception, additional exception code is added to
+  * check for the pending exception so that it can then throw the exception. The
+  * $excode special variable is replaced by the exception code in the excode
+  * typemap attribute.
+  * ----------------------------------------------------------------------------- */
 
   void excodeSubstitute(Node *n, String *code, const String *typemap, Node *parameter) {
     String *excode_attribute = NewStringf("tmap:%s:excode", typemap);
@@ -3682,7 +3683,7 @@ public:
       int count = Replaceall(code, "$excode", excode);
       if (count < 1 || !excode) {
 	Swig_warning(WARN_CSHARP_EXCODE, input_file, line_number,
-		     "C# exception may not be thrown - no $excode or excode attribute in '%s' typemap.\n", typemap);
+	  "C# exception may not be thrown - no $excode or excode attribute in '%s' typemap.\n", typemap);
       }
     } else {
       Replaceall(code, "$excode", empty_string);
@@ -3691,8 +3692,8 @@ public:
   }
 
   /* -----------------------------------------------------------------------------
-   * addOpenNamespace()
-   * ----------------------------------------------------------------------------- */
+  * addOpenNamespace()
+  * ----------------------------------------------------------------------------- */
 
   void addOpenNamespace(const String *nspace, File *file) {
     if (namespce || nspace) {
@@ -3706,8 +3707,8 @@ public:
   }
 
   /* -----------------------------------------------------------------------------
-   * addCloseNamespace()
-   * ----------------------------------------------------------------------------- */
+  * addCloseNamespace()
+  * ----------------------------------------------------------------------------- */
 
   void addCloseNamespace(const String *nspace, File *file) {
     if (namespce || nspace)
@@ -3715,11 +3716,11 @@ public:
   }
 
   /* -----------------------------------------------------------------------------
-   * outputDirectory()
-   *
-   * Return the directory to use for generating C# classes/enums and create the
-   * subdirectory (does not create if language specific outdir does not exist).
-   * ----------------------------------------------------------------------------- */
+  * outputDirectory()
+  *
+  * Return the directory to use for generating C# classes/enums and create the
+  * subdirectory (does not create if language specific outdir does not exist).
+  * ----------------------------------------------------------------------------- */
 
   String *outputDirectory(String *nspace) {
     String *output_directory = Copy(SWIG_output_directory());
@@ -3739,13 +3740,13 @@ public:
   }
 
   /*----------------------------------------------------------------------
-   * Start of director methods
-   *--------------------------------------------------------------------*/
+  * Start of director methods
+  *--------------------------------------------------------------------*/
 
 #if 0
   /*----------------------------------------------------------------------
-   * emitDirectorUpcalls()
-   *--------------------------------------------------------------------*/
+  * emitDirectorUpcalls()
+  *--------------------------------------------------------------------*/
 
   void emitDirectorUpcalls() {
     if (n_dmethods) {
@@ -3777,10 +3778,10 @@ public:
 #endif
 
   /*----------------------------------------------------------------------
-   * emitDirectorExtraMethods()
-   *
-   * This is where the director connect method is generated.
-   *--------------------------------------------------------------------*/
+  * emitDirectorExtraMethods()
+  *
+  * This is where the director connect method is generated.
+  *--------------------------------------------------------------------*/
   void emitDirectorExtraMethods(Node *n) {
     if (!Swig_directorclass(n))
       return;
@@ -3854,12 +3855,12 @@ public:
   }
 
   /* ---------------------------------------------------------------
-   * classDirectorMethod()
-   *
-   * Emit a virtual director method to pass a method call on to the 
-   * underlying C# object.
-   *
-   * --------------------------------------------------------------- */
+  * classDirectorMethod()
+  *
+  * Emit a virtual director method to pass a method call on to the 
+  * underlying C# object.
+  *
+  * --------------------------------------------------------------- */
 
   int classDirectorMethod(Node *n, Node *parent, String *super) {
     String *classname = Getattr(parent, "sym:name");
@@ -3921,12 +3922,12 @@ public:
 
 	  if (SwigType_ispointer(returntype) || (typenode && Getattr(typenode, "abstracts"))) {
 	    /* initialize pointers to something sane. Same for abstract
-	       classes when a reference is returned. */
+	    classes when a reference is returned. */
 	    Wrapper_add_localv(w, "c_result", SwigType_lstr(returntype, "c_result"), "= 0", NIL);
 	  } else {
 	    /* If returning a reference, initialize the pointer to a sane
-	       default - if a C# exception occurs, then the pointer returns
-	       something other than a NULL-initialized reference. */
+	    default - if a C# exception occurs, then the pointer returns
+	    something other than a NULL-initialized reference. */
 	    String *non_ref_type = Copy(returntype);
 
 	    /* Remove reference and const qualifiers */
@@ -3982,7 +3983,7 @@ public:
       }
     } else {
       Swig_warning(WARN_CSHARP_TYPEMAP_CTYPE_UNDEF, input_file, line_number, "No ctype typemap defined for %s for use in %s::%s (skipping director method)\n", 
-	  SwigType_str(returntype, 0), SwigType_namestr(c_classname), SwigType_namestr(name));
+	SwigType_str(returntype, 0), SwigType_namestr(c_classname), SwigType_namestr(name));
       output_director = false;
     }
 
@@ -4066,13 +4067,13 @@ public:
 	  Printf(callback_typedef_parms, "%s", c_param_type);
 
 	  /* Add parameter to the intermediate class code if generating the
-	   * intermediate's upcall code */
+	  * intermediate's upcall code */
 	  if ((tm = Getattr(p, "tmap:imtype"))) {
 
 	    String *imtypeout = Getattr(p, "tmap:imtype:out");	// the type in the imtype typemap's out attribute overrides the type in the typemap
 	    if (imtypeout)
 	      tm = imtypeout;
-            const String *im_directorinattributes = Getattr(p, "tmap:imtype:directorinattributes");
+	    const String *im_directorinattributes = Getattr(p, "tmap:imtype:directorinattributes");
 
 	    String *din = Copy(Getattr(p, "tmap:csdirectorin"));
 
@@ -4104,7 +4105,7 @@ public:
 		substituteClassname(pt, terminator);
 		Replaceall(terminator, "$iminput", ln);
 		if (Len(terminator_code) > 0)
-		Insert(terminator_code, 0, "\n");
+		  Insert(terminator_code, 0, "\n");
 		Insert(terminator_code, 0, terminator);
 	      }
 
@@ -4137,12 +4138,12 @@ public:
 	      }
 	    } else {
 	      Swig_warning(WARN_CSHARP_TYPEMAP_CSDIRECTORIN_UNDEF, input_file, line_number, "No csdirectorin typemap defined for %s for use in %s::%s (skipping director method)\n", 
-		  SwigType_str(pt, 0), SwigType_namestr(c_classname), SwigType_namestr(name));
+		SwigType_str(pt, 0), SwigType_namestr(c_classname), SwigType_namestr(name));
 	      output_director = false;
 	    }
 	  } else {
 	    Swig_warning(WARN_CSHARP_TYPEMAP_CSTYPE_UNDEF, input_file, line_number, "No imtype typemap defined for %s for use in %s::%s (skipping director method)\n", 
-		SwigType_str(pt, 0), SwigType_namestr(c_classname), SwigType_namestr(name));
+	      SwigType_str(pt, 0), SwigType_namestr(c_classname), SwigType_namestr(name));
 	    output_director = false;
 	  }
 
@@ -4150,14 +4151,14 @@ public:
 
 	} else {
 	  Swig_warning(WARN_CSHARP_TYPEMAP_CSDIRECTORIN_UNDEF, input_file, line_number,
-		       "No or improper directorin typemap defined for argument %s for use in %s::%s (skipping director method)\n", 
-		       SwigType_str(pt, 0), SwigType_namestr(c_classname), SwigType_namestr(name));
+	    "No or improper directorin typemap defined for argument %s for use in %s::%s (skipping director method)\n", 
+	    SwigType_str(pt, 0), SwigType_namestr(c_classname), SwigType_namestr(name));
 	  p = nextSibling(p);
 	  output_director = false;
 	}
       } else {
 	Swig_warning(WARN_CSHARP_TYPEMAP_CTYPE_UNDEF, input_file, line_number, "No ctype typemap defined for %s for use in %s::%s (skipping director method)\n", 
-	    SwigType_str(pt, 0), SwigType_namestr(c_classname), SwigType_namestr(name));
+	  SwigType_str(pt, 0), SwigType_namestr(c_classname), SwigType_namestr(name));
 	output_director = false;
 	p = nextSibling(p);
       }
@@ -4258,8 +4259,8 @@ public:
 	  Printf(w->code, "%s\n", tm);
 	} else {
 	  Swig_warning(WARN_TYPEMAP_DIRECTOROUT_UNDEF, input_file, line_number,
-		       "Unable to use return type %s used in %s::%s (skipping director method)\n", 
-		       SwigType_str(returntype, 0), SwigType_namestr(c_classname), SwigType_namestr(name));
+	    "Unable to use return type %s used in %s::%s (skipping director method)\n", 
+	    SwigType_str(returntype, 0), SwigType_namestr(c_classname), SwigType_namestr(name));
 	  output_director = false;
 	}
 
@@ -4356,8 +4357,8 @@ public:
   }
 
   /* ------------------------------------------------------------
-   * classDirectorConstructor()
-   * ------------------------------------------------------------ */
+  * classDirectorConstructor()
+  * ------------------------------------------------------------ */
 
   int classDirectorConstructor(Node *n) {
     Node *parent = parentNode(n);
@@ -4414,8 +4415,8 @@ public:
   }
 
   /* ------------------------------------------------------------
-   * classDirectorDefaultConstructor()
-   * ------------------------------------------------------------ */
+  * classDirectorDefaultConstructor()
+  * ------------------------------------------------------------ */
 
   int classDirectorDefaultConstructor(Node *n) {
     String *dirclassname = directorClassName(n);
@@ -4435,8 +4436,8 @@ public:
 
 
   /* ------------------------------------------------------------
-   * classDirectorInit()
-   * ------------------------------------------------------------ */
+  * classDirectorInit()
+  * ------------------------------------------------------------ */
 
   int classDirectorInit(Node *n) {
     Delete(none_comparison);
@@ -4489,8 +4490,8 @@ public:
   }
 
   /* ----------------------------------------------------------------------
-   * classDirectorDestructor()
-   * ---------------------------------------------------------------------- */
+  * classDirectorDestructor()
+  * ---------------------------------------------------------------------- */
 
   int classDirectorDestructor(Node *n) {
     Node *current_class = getCurrentClass();
@@ -4515,8 +4516,8 @@ public:
   }
 
   /* ------------------------------------------------------------
-   * classDirectorEnd()
-   * ------------------------------------------------------------ */
+  * classDirectorEnd()
+  * ------------------------------------------------------------ */
 
   int classDirectorEnd(Node *n) {
     int i;
@@ -4574,28 +4575,28 @@ public:
   }
 
   /* --------------------------------------------------------------------
-   * classDirectorDisown()
-   * ------------------------------------------------------------------*/
+  * classDirectorDisown()
+  * ------------------------------------------------------------------*/
   virtual int classDirectorDisown(Node *n) {
     (void) n;
     return SWIG_OK;
   }
 
   /*----------------------------------------------------------------------
-   * extraDirectorProtectedCPPMethodsRequired()
-   *--------------------------------------------------------------------*/
+  * extraDirectorProtectedCPPMethodsRequired()
+  *--------------------------------------------------------------------*/
 
   bool extraDirectorProtectedCPPMethodsRequired() const {
     return false;
   }
 
   /*----------------------------------------------------------------------
-   * directorDeclaration()
-   *
-   * Generate the director class's declaration
-   * e.g. "class SwigDirector_myclass : public myclass, public Swig::Director {"
-   *--------------------------------------------------------------------*/
- 
+  * directorDeclaration()
+  *
+  * Generate the director class's declaration
+  * e.g. "class SwigDirector_myclass : public myclass, public Swig::Director {"
+  *--------------------------------------------------------------------*/
+
   void directorDeclaration(Node *n) {
 
     String *base = Getattr(n, "classtype");
@@ -4614,8 +4615,8 @@ public:
   }
 
   /*----------------------------------------------------------------------
-   * nestedClassesSupport()
-   *--------------------------------------------------------------------*/
+  * nestedClassesSupport()
+  *--------------------------------------------------------------------*/
 
   NestedClassSupport nestedClassesSupport() const {
     return NCS_Full;
@@ -4623,29 +4624,29 @@ public:
 };				/* class CSHARP */
 
 /* -----------------------------------------------------------------------------
- * swig_csharp()    - Instantiate module
- * ----------------------------------------------------------------------------- */
+* swig_csharp()    - Instantiate module
+* ----------------------------------------------------------------------------- */
 
 static Language *new_swig_csharp() {
   return new CSHARP();
 }
-extern "C" Language *swig_csharp(void) {
+extern "C" Language *swig_csharp() {
   return new_swig_csharp();
 }
 
 /* -----------------------------------------------------------------------------
- * Static member variables
- * ----------------------------------------------------------------------------- */
+* Static member variables
+* ----------------------------------------------------------------------------- */
 
 const char *CSHARP::usage = "\
-C# Options (available with -csharp)\n\
-     -doxygen        - Convert C++ doxygen comments to JavaDoc comments in proxy classes\n\
-     -debug-doxygen-parser     - Display doxygen parser module debugging information\n\
-     -debug-doxygen-translator - Display doxygen translator module debugging information\n\
-     -dllimport <dl> - Override DllImport attribute name to <dl>\n\
-     -namespace <nm> - Generate wrappers into C# namespace <nm>\n\
-     -noproxy        - Generate the low-level functional interface instead\n\
-                       of proxy classes\n\
-     -oldvarnames    - Old intermediary method names for variable wrappers\n\
-     -outfile <file> - Write all C# into a single <file> located in the output directory\n\
-\n";
+			    C# Options (available with -csharp)\n\
+			    -doxygen        - Convert C++ doxygen comments to JavaDoc comments in proxy classes\n\
+			    -debug-doxygen-parser     - Display doxygen parser module debugging information\n\
+			    -debug-doxygen-translator - Display doxygen translator module debugging information\n\
+			    -dllimport <dl> - Override DllImport attribute name to <dl>\n\
+			    -namespace <nm> - Generate wrappers into C# namespace <nm>\n\
+			    -noproxy        - Generate the low-level functional interface instead\n\
+			    of proxy classes\n\
+			    -oldvarnames    - Old intermediary method names for variable wrappers\n\
+			    -outfile <file> - Write all C# into a single <file> located in the output directory\n\
+			    \n";
